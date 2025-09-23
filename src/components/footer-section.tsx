@@ -2,69 +2,12 @@ const FooterSection = () => {
   return (
     <footer className="bg-primary text-primary-foreground py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Brand */}
-          <div className="col-span-1 md:col-span-2">
-            <h3 className="text-2xl font-bold mb-4">File Merger AI</h3>
-            <p className="text-primary-foreground/80 max-w-md leading-relaxed">
-              The fastest, most secure way to merge any file types into universal formats. 
-              Powered by advanced AI technology.
-            </p>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h4 className="font-semibold mb-4">Product</h4>
-            <ul className="space-y-3">
-              <li>
-                <a href="#" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors duration-300">
-                  Features
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors duration-300">
-                  Pricing
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors duration-300">
-                  API Docs
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors duration-300">
-                  Integrations
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h4 className="font-semibold mb-4">Company</h4>
-            <ul className="space-y-3">
-              <li>
-                <a href="#" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors duration-300">
-                  About
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors duration-300">
-                  Privacy
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors duration-300">
-                  Terms
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors duration-300">
-                  Contact
-                </a>
-              </li>
-            </ul>
-          </div>
+        <div className="text-center">
+          <h3 className="text-3xl font-bold mb-4">File Merger AI</h3>
+          <p className="text-primary-foreground/80 max-w-2xl mx-auto leading-relaxed text-lg">
+            The fastest, most secure way to merge any file types into universal formats. 
+            Powered by advanced AI technology for seamless file processing.
+          </p>
         </div>
 
         {/* Bottom bar */}

@@ -6,12 +6,15 @@ const HeroSection = () => {
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background with waves */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-10"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
         style={{ backgroundImage: `url(${heroWaves})` }}
       />
       
       {/* Gradient overlay */}
-      <div className="absolute inset-0 gradient-hero opacity-60" />
+      <div className="absolute inset-0 gradient-hero opacity-80" />
+      
+      {/* Additional glow effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/20" />
       
       {/* Content */}
       <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
@@ -25,19 +28,12 @@ const HeroSection = () => {
             Combine DOCX, PDF, TXT, PPTX, Images & more into one universal file — powered by AI.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex justify-center">
             <Button 
               size="lg" 
-              className="bg-primary text-primary-foreground hover:bg-hover hover:text-hover-foreground px-8 py-4 text-lg font-semibold rounded-xl shadow-glow transition-all duration-300 animate-glow"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 px-12 py-6 text-xl font-bold rounded-2xl shadow-glow transition-all duration-300 animate-glow"
             >
-              Merge Now
-            </Button>
-            <Button 
-              variant="outline" 
-              size="lg"
-              className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground px-8 py-4 text-lg font-semibold rounded-xl transition-all duration-300"
-            >
-              Try Demo
+              Start Merging Files
             </Button>
           </div>
         </div>

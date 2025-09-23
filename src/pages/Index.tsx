@@ -2,7 +2,6 @@ import HeroSection from "@/components/hero-section";
 import FileTypeGrid from "@/components/file-grid-section";
 import FeaturesSection from "@/components/features-section";
 import HowItWorksSection from "@/components/how-it-works-section";
-import PricingSection from "@/components/pricing-section";
 import FooterSection from "@/components/footer-section";
 
 const Index = () => {
@@ -12,7 +11,6 @@ const Index = () => {
       <FileTypeGrid />
       <FeaturesSection />
       <HowItWorksSection />
-      <PricingSection />
       <FooterSection />
     </div>
   );
