@@ -1,22 +1,12 @@
 import { Button } from "@/components/ui/button";
 import heroWaves from "@/assets/hero-waves.jpg";
-import { useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 const HeroSection = () => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   const handleStartMerging = () => {
-    // Trigger file input click
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      console.log("Selected files:", Array.from(files).map(f => f.name));
-      // Here you can add your file processing logic
-      alert(`Selected ${files.length} file(s): ${Array.from(files).map(f => f.name).join(', ')}`);
-    }
+    navigate('/dashboard');
   };
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
@@ -50,16 +40,6 @@ const HeroSection = () => {
               Start Merging Files
             </Button>
           </div>
-          
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept=".pdf,.docx,.txt,.pptx,.jpg,.jpeg,.png,.xlsx,.csv"
-            onChange={handleFileChange}
-            className="hidden"
-          />
         </div>
         
         {/* Floating elements for visual interest */}
