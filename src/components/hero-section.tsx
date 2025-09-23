@@ -3,18 +3,15 @@ import heroWaves from "@/assets/hero-waves.jpg";
 
 const HeroSection = () => {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background with waves */}
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
+      {/* Subtle background pattern */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-5"
         style={{ backgroundImage: `url(${heroWaves})` }}
       />
       
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 gradient-hero opacity-80" />
-      
-      {/* Additional glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/20" />
+      {/* Subtle gradient for depth */}
+      <div className="absolute inset-0 bg-gradient-to-br from-muted/30 via-transparent to-muted/30" />
       
       {/* Content */}
       <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
