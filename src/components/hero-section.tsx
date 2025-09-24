@@ -28,7 +28,7 @@ const HeroSection = () => {
           </h1>
           
           <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground max-w-3xl mx-auto mb-12 leading-relaxed">
-            Combine DOCX, PDF, TXT, PPTX, Images & more into one universal file — powered by AI.
+            Combine DOCX, PDF, TXT, PPTX, Images & more into one universal file — fast and secure.
           </p>
           
           <div className="flex justify-center">

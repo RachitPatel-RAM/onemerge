@@ -1,6 +1,12 @@
 import { Upload, Settings, Download } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const HowItWorksSection = () => {
+  const navigate = useNavigate();
+
+  const handleStartMerging = () => {
+    navigate('/dashboard');
+  };
   const steps = [
     {
       step: "01",
@@ -20,7 +26,7 @@ const HowItWorksSection = () => {
       step: "03",
       icon: Download,
       title: "Download Merged File",
-      description: "Get your perfectly merged file in seconds. Preview before download to ensure it meets your needs.",
+      description: "Get your merged file in seconds. Preview before download to ensure it meets your needs.",
       color: "text-green-500"
     }
   ];
@@ -75,7 +81,10 @@ const HowItWorksSection = () => {
 
         {/* Call to action */}
         <div className="text-center mt-16">
-          <button className="bg-primary text-primary-foreground hover:bg-hover hover:text-hover-foreground px-8 py-4 rounded-xl font-semibold text-lg shadow-glow transition-all duration-300 animate-glow">
+          <button 
+            onClick={handleStartMerging}
+            className="bg-primary text-primary-foreground hover:bg-hover hover:text-hover-foreground px-8 py-4 rounded-xl font-semibold text-lg shadow-glow transition-all duration-300 animate-glow"
+          >
             Start Merging Files
           </button>
         </div>

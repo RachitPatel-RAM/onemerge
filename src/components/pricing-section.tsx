@@ -8,7 +8,7 @@ const PricingSection = () => {
   const plans = [
     {
       name: "Free",
-      description: "Perfect for occasional use",
+      description: "Ideal for occasional use",
       monthlyPrice: 0,
       yearlyPrice: 0,
       features: [
