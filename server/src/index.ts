@@ -1,7 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import compression from 'compression';
+import type { RequestHandler } from 'express';
+import compression = require('compression');
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -10,6 +11,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
 import mergeRoutes from './routes/merge';
 import healthRoutes from './routes/health';
+import powerpointRoutes from './routes/powerpoint';
 
 // Load environment variables
 dotenv.config();
@@ -48,6 +50,7 @@ app.use(requestLogger);
 // Routes
 app.use('/api/health', healthRoutes);
 app.use('/api/merge', mergeRoutes);
+app.use('/api/powerpoint', powerpointRoutes);
 
 // Serve static files from output directory
 app.use('/api/download', express.static(path.join(__dirname, '../', process.env.OUTPUT_DIR || './output')));

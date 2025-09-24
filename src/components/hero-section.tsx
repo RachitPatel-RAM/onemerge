@@ -8,6 +8,8 @@ const HeroSection = () => {
   const handleStartMerging = () => {
     navigate('/dashboard');
   };
+
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
       {/* Subtle background pattern */}
@@ -31,7 +33,7 @@ const HeroSection = () => {
             Combine DOCX, PDF, TXT, PPTX, Images & more into one universal file — fast and secure.
           </p>
           
-          <div className="flex justify-center">
+          <div className="flex justify-center items-center">
             <Button 
               size="lg" 
               onClick={handleStartMerging}
