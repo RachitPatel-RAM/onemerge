@@ -7,8 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "build:prod": "vite build --mode production",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:build": "npm run build:prod && cd server && npm install && npm run build",
+    "deploy:render": "bash deploy.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

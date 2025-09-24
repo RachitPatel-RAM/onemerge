@@ -1,0 +1,26 @@
+services:
+  # Backend API Service
+  - type: web
+    name: onemerge-api
+    env: node
+    plan: starter
+    buildCommand: cd server && npm install && npm run build
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CORS_ORIGIN
+        value: https://onemerge-frontend.onrender.com
+    
+  # Frontend Static Site
+  - type: web
+    name: onemerge-frontend
+    env: static
+    plan: starter
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://onemerge-api.onrender.com
