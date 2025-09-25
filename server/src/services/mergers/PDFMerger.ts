@@ -22,11 +22,12 @@ export class PDFMerger {
     try {
       const pdfDoc = await this.ensureInitialized();
       
-      // Read the PDF file as a Buffer
+      // Read the PDF file as a Buffer and convert to Uint8Array for pdf-lib
       const pdfBuffer = fs.readFileSync(filePath);
+      const pdfUint8Array = new Uint8Array(pdfBuffer.buffer, pdfBuffer.byteOffset, pdfBuffer.byteLength);
       
-      // Load the PDF using the buffer
-      const pdf = await PDFDocument.load(pdfBuffer);
+      // Load the PDF using the Uint8Array
+      const pdf = await PDFDocument.load(pdfUint8Array);
       const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
       
       pages.forEach(page => {

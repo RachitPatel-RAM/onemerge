@@ -207,9 +207,9 @@ export class PowerPointService {
         const imageFormat = this.detectImageFormat(slide.buffer);
         
         if (imageFormat === 'png') {
-          image = await pdfDoc.embedPng(slide.buffer);
+          image = await pdfDoc.embedPng(new Uint8Array(slide.buffer.buffer, slide.buffer.byteOffset, slide.buffer.byteLength));
         } else if (imageFormat === 'jpeg') {
-          image = await pdfDoc.embedJpg(slide.buffer);
+          image = await pdfDoc.embedJpg(new Uint8Array(slide.buffer.buffer, slide.buffer.byteOffset, slide.buffer.byteLength));
         } else {
           throw new Error(`Unsupported image format: ${imageFormat}`);
         }
@@ -241,16 +241,19 @@ export class PowerPointService {
    * Detect image format from buffer
    */
   private detectImageFormat(buffer: Buffer): 'png' | 'jpeg' {
+    // Convert Buffer to Uint8Array for proper type compatibility
+    const uint8Array = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    
     // Check PNG signature
-    if (buffer.length >= 8 && 
-        buffer[0] === 0x89 && buffer[1] === 0x50 && 
-        buffer[2] === 0x4E && buffer[3] === 0x47) {
+    if (uint8Array.length >= 8 && 
+        uint8Array[0] === 0x89 && uint8Array[1] === 0x50 && 
+        uint8Array[2] === 0x4E && uint8Array[3] === 0x47) {
       return 'png';
     }
     
     // Check JPEG signature
-    if (buffer.length >= 2 && 
-        buffer[0] === 0xFF && buffer[1] === 0xD8) {
+    if (uint8Array.length >= 2 && 
+        uint8Array[0] === 0xFF && uint8Array[1] === 0xD8) {
       return 'jpeg';
     }
     

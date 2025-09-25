@@ -120,13 +120,13 @@ export class PDFGenerationService {
       const imageFormat = this.detectImageFormat(imageInput.buffer);
 
       if (imageFormat === 'png') {
-        embeddedImage = await pdfDoc.embedPng(imageInput.buffer);
+        embeddedImage = await pdfDoc.embedPng(new Uint8Array(imageInput.buffer.buffer, imageInput.buffer.byteOffset, imageInput.buffer.byteLength));
       } else if (imageFormat === 'jpeg') {
-        embeddedImage = await pdfDoc.embedJpg(imageInput.buffer);
+        embeddedImage = await pdfDoc.embedJpg(new Uint8Array(imageInput.buffer.buffer, imageInput.buffer.byteOffset, imageInput.buffer.byteLength));
       } else {
         // Convert to PNG if unsupported format
         const pngBuffer = await sharp(imageInput.buffer).png().toBuffer();
-        embeddedImage = await pdfDoc.embedPng(pngBuffer);
+        embeddedImage = await pdfDoc.embedPng(new Uint8Array(pngBuffer.buffer, pngBuffer.byteOffset, pngBuffer.byteLength));
       }
 
       // Calculate image placement
@@ -213,7 +213,7 @@ export class PDFGenerationService {
 
       for (const pdfPath of pdfPaths) {
         const pdfBytes = fs.readFileSync(pdfPath);
-        const pdf = await PDFDocument.load(pdfBytes);
+        const pdf = await PDFDocument.load(new Uint8Array(pdfBytes.buffer, pdfBytes.byteOffset, pdfBytes.byteLength));
         const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
         
         copiedPages.forEach((page) => mergedPdf.addPage(page));
@@ -250,16 +250,19 @@ export class PDFGenerationService {
    * Detect image format from buffer
    */
   private detectImageFormat(buffer: Buffer): 'png' | 'jpeg' | 'unknown' {
+    // Convert Buffer to Uint8Array for proper type compatibility
+    const uint8Array = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    
     // Check PNG signature
-    if (buffer.length >= 8 && 
-        buffer[0] === 0x89 && buffer[1] === 0x50 && 
-        buffer[2] === 0x4E && buffer[3] === 0x47) {
+    if (uint8Array.length >= 8 && 
+        uint8Array[0] === 0x89 && uint8Array[1] === 0x50 && 
+        uint8Array[2] === 0x4E && uint8Array[3] === 0x47) {
       return 'png';
     }
     
     // Check JPEG signature
-    if (buffer.length >= 2 && 
-        buffer[0] === 0xFF && buffer[1] === 0xD8) {
+    if (uint8Array.length >= 2 && 
+        uint8Array[0] === 0xFF && uint8Array[1] === 0xD8) {
       return 'jpeg';
     }
     
@@ -324,7 +327,7 @@ export class PDFGenerationService {
   }> {
     try {
       const pdfBytes = fs.readFileSync(filePath);
-      const pdf = await PDFDocument.load(pdfBytes);
+      const pdf = await PDFDocument.load(new Uint8Array(pdfBytes.buffer, pdfBytes.byteOffset, pdfBytes.byteLength));
       
       return {
         pageCount: pdf.getPageCount(),

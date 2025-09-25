@@ -56,21 +56,21 @@ export class PresentationMerger {
     try {
       return await this.convertWithLibreOfficeCommand(filePath, tempDir, tempPdfPath);
     } catch (error) {
-      console.warn(`LibreOffice command failed: ${error.message}`);
+      console.warn(`LibreOffice command failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // Strategy 2: Try libreoffice-convert package (cloud-friendly)
     try {
       return await this.convertWithLibreOfficePackage(filePath, tempPdfPath);
     } catch (error) {
-      console.warn(`LibreOffice package failed: ${error.message}`);
+      console.warn(`LibreOffice package failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // Strategy 3: Try online conversion service (mobile-friendly)
     try {
       return await this.convertWithOnlineService(filePath, tempPdfPath);
     } catch (error) {
-      console.warn(`Online conversion failed: ${error.message}`);
+      console.warn(`Online conversion failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // Strategy 4: Create informative placeholder PDF
