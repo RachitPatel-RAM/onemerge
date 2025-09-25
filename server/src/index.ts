@@ -39,8 +39,31 @@ createDirectories();
 // Middleware
 app.use(helmet());
 app.use(compression());
+
+// CORS configuration with multiple origins support
+const allowedOrigins = [
+  'http://localhost:8080',
+  'http://localhost:5173',
+  'https://onemergee.onrender.com',
+  process.env.CORS_ORIGIN
+].filter(Boolean);
+
+console.log('🔧 CORS Configuration:');
+console.log('📍 Allowed Origins:', allowedOrigins);
+console.log('🌍 CORS_ORIGIN env var:', process.env.CORS_ORIGIN);
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -68,6 +91,8 @@ app.listen(PORT, () => {
   console.log(`📁 Upload directory: ${process.env.UPLOAD_DIR || './uploads'}`);
   console.log(`📤 Output directory: ${process.env.OUTPUT_DIR || './output'}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'not set'}`);
+  console.log(`🔗 All allowed origins:`, allowedOrigins);
 });
 
 export default app;
