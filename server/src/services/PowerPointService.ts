@@ -102,7 +102,7 @@ export class PowerPointService {
   }
 
   /**
-   * Convert PowerPoint using LibreOffice headless mode
+   * Convert PowerPoint using enhanced LibreOffice headless mode
    */
   private async convertWithLibreOffice(
     inputPath: string,
@@ -110,27 +110,24 @@ export class PowerPointService {
     options: ConversionOptions
   ): Promise<SlideImage[]> {
     try {
-      // Convert PowerPoint to PDF first using LibreOffice
-      const pdfPath = path.join(outputDir, 'temp.pdf');
-      const libreOfficeCmd = `soffice --headless --convert-to pdf --outdir "${outputDir}" "${inputPath}"`;
+      // Use the enhanced PresentationMerger for better conversion
+      const { PresentationMerger } = require('./mergers/PresentationMerger');
+      const presentationMerger = new PresentationMerger();
       
-      await execAsync(libreOfficeCmd);
+      // Convert PowerPoint to PDF using the enhanced merger
+      const pdfPath = await presentationMerger.convertToPDF(inputPath);
       
-      // Check if PDF was created
-      const expectedPdfName = path.basename(inputPath, path.extname(inputPath)) + '.pdf';
-      const actualPdfPath = path.join(outputDir, expectedPdfName);
-      
-      if (!fs.existsSync(actualPdfPath)) {
-        throw new Error('LibreOffice conversion failed - PDF not created');
+      if (!fs.existsSync(pdfPath)) {
+        throw new Error('Enhanced PowerPoint conversion failed - PDF not created');
       }
 
       // Convert PDF pages to images using ImageMagick or similar
-      const slideImages = await this.convertPDFToImages(actualPdfPath, outputDir, options);
+      const slideImages = await this.convertPDFToImages(pdfPath, outputDir, options);
       
       return slideImages;
     } catch (error) {
       // Fallback: Try alternative conversion method
-      console.warn('LibreOffice conversion failed, trying alternative method:', error);
+      console.warn('Enhanced LibreOffice conversion failed, trying alternative method:', error);
       return await this.convertWithAlternativeMethod(inputPath, outputDir, options);
     }
   }
@@ -143,9 +140,29 @@ export class PowerPointService {
     outputDir: string,
     options: ConversionOptions
   ): Promise<SlideImage[]> {
-    // This is a simplified fallback - in a real implementation,
-    // you might use other libraries like node-pptx or similar
-    throw new Error('PowerPoint conversion requires LibreOffice or ImageMagick to be installed on the system');
+    try {
+      console.log('Using enhanced PPTX parsing as fallback conversion method');
+      
+      // Use the enhanced PresentationMerger for PPTX parsing
+      const { PresentationMerger } = require('./mergers/PresentationMerger');
+      const presentationMerger = new PresentationMerger();
+      
+      // Convert PowerPoint to PDF using enhanced parsing
+      const pdfPath = await presentationMerger.convertToPDF(inputPath);
+      
+      if (!fs.existsSync(pdfPath)) {
+        throw new Error('Enhanced PPTX parsing conversion failed - PDF not created');
+      }
+
+      // Convert PDF pages to images
+      const slideImages = await this.convertPDFToImages(pdfPath, outputDir, options);
+      
+      console.log(`Alternative conversion successful: ${slideImages.length} slides processed`);
+      return slideImages;
+    } catch (error) {
+      console.error('Alternative conversion method failed:', error);
+      throw new Error(`PowerPoint conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
