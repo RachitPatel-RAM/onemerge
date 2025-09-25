@@ -187,20 +187,28 @@ export class PresentationMerger {
         throw new Error('PPTX file not found');
       }
       
+      console.log(`File exists, size: ${fs.statSync(filePath).size} bytes`);
+      
       // Extract PPTX content
+      console.log('Creating AdmZip instance...');
       const zip = new AdmZip(filePath);
+      console.log('Getting zip entries...');
       const entries = zip.getEntries();
+      console.log(`Found ${entries.length} entries in PPTX file`);
       
       // Parse presentation structure
       let slideCount = 0;
       const slideData: any[] = [];
       
       // Count slides and extract basic information
+      console.log('Searching for slide entries...');
       entries.forEach((entry: any) => {
         if (entry.entryName.startsWith('ppt/slides/slide') && entry.entryName.endsWith('.xml')) {
           slideCount++;
+          console.log(`Processing slide ${slideCount}: ${entry.entryName}`);
           try {
             const slideContent = entry.getData().toString('utf8');
+            console.log(`Slide ${slideCount} content length: ${slideContent.length}`);
             
             // Extract text content using multiple regex patterns for better coverage
             const textPatterns = [
@@ -219,13 +227,17 @@ export class PresentationMerger {
             });
             
             // Remove duplicates
-            slideText = [...new Set(slideText)];
-            
-            slideData.push({
-              slideNumber: slideCount,
-              text: slideText,
-              hasContent: slideText.length > 0
-            });
+             slideText = [...new Set(slideText)];
+             console.log(`Slide ${slideCount} extracted text items: ${slideText.length}`);
+             if (slideText.length > 0) {
+               console.log(`First few text items:`, slideText.slice(0, 3));
+             }
+             
+             slideData.push({
+               slideNumber: slideCount,
+               text: slideText,
+               hasContent: slideText.length > 0
+             });
           } catch (slideError) {
             console.warn(`Warning: Could not parse slide ${slideCount}:`, slideError);
             slideData.push({
