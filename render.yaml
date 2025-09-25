@@ -18,7 +18,7 @@ services:
       - key: PORT
         value: 10000
       - key: CORS_ORIGIN
-        value: https://onemerge-frontend.onrender.com
+        value: https://onemergee.onrender.com
       - key: LIBREOFFICE_PATH
         value: /usr/bin/libreoffice
       - key: MAGICK_PATH
@@ -45,4 +45,4 @@ services:
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
-        value: https://onemerge-api.onrender.com
+        value: https://onemerge.onrender.com/api
