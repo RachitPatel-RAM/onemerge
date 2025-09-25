@@ -6,6 +6,33 @@ import csv from 'csv-parser';
 export class TextMerger {
   private content: string[] = [];
 
+  /**
+   * Sanitize text to remove or replace characters that can't be encoded with WinAnsi
+   */
+  private sanitizeText(text: string): string {
+    return text
+      // Replace common Unicode characters with ASCII alternatives
+      .replace(/✅/g, '[CHECK]')
+      .replace(/❌/g, '[X]')
+      .replace(/⚠/g, '[WARNING]')
+      .replace(/✓/g, '+')
+      .replace(/✗/g, '-')
+      .replace(/•/g, '-')
+      .replace(/→/g, '->')
+      .replace(/←/g, '<-')
+      .replace(/↑/g, '^')
+      .replace(/↓/g, 'v')
+      // Replace smart quotes with regular quotes
+      .replace(/[""]/g, '"')
+      .replace(/['']/g, "'")
+      // Replace em/en dashes with regular hyphens
+      .replace(/[—–]/g, '-')
+      // Replace ellipsis with three dots
+      .replace(/…/g, '...')
+      // Remove any remaining non-ASCII characters that might cause issues
+      .replace(/[^\x00-\xFF]/g, '?');
+  }
+
   async addTextFile(filePath: string): Promise<void> {
     try {
       const content = fs.readFileSync(filePath, 'utf-8');
@@ -73,7 +100,8 @@ export class TextMerger {
 
     try {
       const content = fs.readFileSync(filePath, 'utf-8');
-      const lines = content.split('\n');
+      const sanitizedContent = this.sanitizeText(content);
+      const lines = sanitizedContent.split('\n');
       
       const pdfDoc = await PDFDocument.create();
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -186,7 +214,8 @@ export class TextMerger {
 
               // Draw headers
               headers.forEach((header, index) => {
-                currentPage.drawText(header, {
+                const sanitizedHeader = this.sanitizeText(header);
+                currentPage.drawText(sanitizedHeader, {
                   x: margin + (index * colWidth),
                   y: currentY,
                   size: fontSize,
@@ -206,8 +235,9 @@ export class TextMerger {
                 headers.forEach((header, index) => {
                   const value = (row[header] || '').toString();
                   const truncatedValue = value.length > 20 ? value.substring(0, 17) + '...' : value;
+                  const sanitizedValue = this.sanitizeText(truncatedValue);
                   
-                  currentPage.drawText(truncatedValue, {
+                  currentPage.drawText(sanitizedValue, {
                     x: margin + (index * colWidth),
                     y: currentY,
                     size: fontSize,
