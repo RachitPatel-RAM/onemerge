@@ -7,7 +7,8 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "jest"
+    "test": "jest",
+    "postinstall": "node -e \"console.log('Checking LibreOffice installation...'); const { exec } = require('child_process'); exec('which libreoffice || echo LibreOffice not found', (err, stdout) => { console.log(stdout); });\""
   },
   "dependencies": {
     "@types/xml2js": "^0.4.14",

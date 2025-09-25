@@ -2,10 +2,16 @@ services:
   # Backend API Service
   - type: web
     name: onemerge-api
-    env: node
+    env: docker
     plan: starter
-    buildCommand: cd server && npm install && npm run build
-    startCommand: cd server && npm start
+    dockerfilePath: ./Dockerfile
+    # Fallback build command if Docker fails
+    buildCommand: |
+      if [ -f "install-libreoffice.sh" ]; then
+        chmod +x install-libreoffice.sh
+        ./install-libreoffice.sh
+      fi
+      cd server && npm install && npm run build
     envVars:
       - key: NODE_ENV
         value: production
