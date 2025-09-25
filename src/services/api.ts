@@ -1,6 +1,6 @@
 import { getBrandedDocumentBase } from "@/lib/branding";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://onemerge.onrender.com/api';
 
 export interface FileItem {
   id: string;
