@@ -13,6 +13,7 @@ import mergeRoutes from './routes/merge';
 import healthRoutes from './routes/health';
 import powerpointRoutes from './routes/powerpoint';
 import testRoutes from './routes/test';
+import { LibreOfficeVerificationService } from './services/LibreOfficeVerificationService';
 
 // Load environment variables
 dotenv.config();
@@ -88,13 +89,28 @@ app.use('*', (req: express.Request, res: express.Response) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📁 Upload directory: ${process.env.UPLOAD_DIR || './uploads'}`);
   console.log(`📤 Output directory: ${process.env.OUTPUT_DIR || './output'}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'not set'}`);
   console.log(`🔗 All allowed origins:`, allowedOrigins);
+  
+  // Verify LibreOffice installation
+  try {
+    const libreOfficeService = LibreOfficeVerificationService.getInstance();
+    const status = await libreOfficeService.verifyLibreOfficeInstallation();
+    
+    if (status.isInstalled && status.canConvert) {
+      console.log('✅ LibreOffice is properly installed and functional');
+    } else {
+      console.warn('⚠️ LibreOffice installation issues detected:');
+      console.warn(await libreOfficeService.getStatusReport());
+    }
+  } catch (error) {
+    console.error('❌ Failed to verify LibreOffice installation:', error);
+  }
 });
 
 export default app;

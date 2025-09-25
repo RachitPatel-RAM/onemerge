@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { PowerPointService, ConversionOptions } from '../services/PowerPointService';
 import { PDFGenerationService, PDFOptions } from '../services/PDFGenerationService';
+import { LibreOfficeVerificationService } from '../services/LibreOfficeVerificationService';
 
 const router = express.Router();
 
@@ -117,10 +118,37 @@ router.post('/convert-to-pdf', upload.single('file'), async (req, res) => {
       fs.unlinkSync(req.file.path);
     }
 
+    // Get LibreOffice diagnostics for better error reporting
+    let libreOfficeDiagnostics = null;
+    try {
+      const verificationService = new LibreOfficeVerificationService();
+      libreOfficeDiagnostics = await verificationService.getLibreOfficeStatus();
+    } catch (diagError) {
+      console.error('Failed to get LibreOffice diagnostics:', diagError);
+    }
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const isLibreOfficeError = errorMessage.toLowerCase().includes('libreoffice') || 
+                               errorMessage.toLowerCase().includes('conversion failed');
+
     return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-      details: 'Failed to convert PowerPoint to PDF'
+      error: errorMessage,
+      details: 'Failed to convert PowerPoint to PDF',
+      diagnostics: {
+        libreOffice: libreOfficeDiagnostics,
+        isLibreOfficeRelated: isLibreOfficeError,
+        recommendations: isLibreOfficeError ? [
+          'Verify LibreOffice is properly installed on the server',
+          'Check server environment variables for LibreOffice path',
+          'Ensure sufficient system resources are available',
+          'Try using the /api/test/libreoffice endpoint to verify installation'
+        ] : [
+          'Check file format and integrity',
+          'Verify file is not corrupted',
+          'Ensure sufficient disk space is available'
+        ]
+      }
     });
   }
 });
@@ -202,10 +230,37 @@ router.post('/convert-to-images', upload.single('file'), async (req, res) => {
       fs.unlinkSync(req.file.path);
     }
 
+    // Get LibreOffice diagnostics for better error reporting
+    let libreOfficeDiagnostics = null;
+    try {
+      const verificationService = new LibreOfficeVerificationService();
+      libreOfficeDiagnostics = await verificationService.getLibreOfficeStatus();
+    } catch (diagError) {
+      console.error('Failed to get LibreOffice diagnostics:', diagError);
+    }
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const isLibreOfficeError = errorMessage.toLowerCase().includes('libreoffice') || 
+                               errorMessage.toLowerCase().includes('conversion failed');
+
     return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-      details: 'Failed to convert PowerPoint to images'
+      error: errorMessage,
+      details: 'Failed to convert PowerPoint to images',
+      diagnostics: {
+        libreOffice: libreOfficeDiagnostics,
+        isLibreOfficeRelated: isLibreOfficeError,
+        recommendations: isLibreOfficeError ? [
+          'Verify LibreOffice is properly installed on the server',
+          'Check server environment variables for LibreOffice path',
+          'Ensure sufficient system resources are available',
+          'Try using the /api/test/libreoffice endpoint to verify installation'
+        ] : [
+          'Check file format and integrity',
+          'Verify file is not corrupted',
+          'Ensure sufficient disk space is available'
+        ]
+      }
     });
   }
 });

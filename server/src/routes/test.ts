@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { ConversionTestService, TestSuiteResult } from '../services/ConversionTestService';
 import { PerformanceTestSuite } from '../tests/PerformanceTestSuite';
 import { createError } from '../middleware/errorHandler';
+import { LibreOfficeVerificationService } from '../services/LibreOfficeVerificationService';
 
 const router = Router();
 const testService = new ConversionTestService();
@@ -196,6 +197,45 @@ router.post('/performance-export', async (req: Request, res: Response, next: Nex
     });
   } catch (error) {
     next(createError(`Failed to export performance report: ${error instanceof Error ? error.message : String(error)}`, 500));
+  }
+});
+
+/**
+ * GET /api/test/libreoffice
+ * Test LibreOffice installation and functionality
+ */
+router.get('/libreoffice', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    console.log('[TestRoute] Testing LibreOffice installation...');
+    
+    const libreOfficeService = LibreOfficeVerificationService.getInstance();
+    const status = await libreOfficeService.verifyLibreOfficeInstallation();
+    const statusReport = await libreOfficeService.getStatusReport();
+    
+    res.json({
+      success: status.isInstalled && status.canConvert,
+      status: {
+        installed: status.isInstalled,
+        path: status.path,
+        version: status.version,
+        canConvert: status.canConvert,
+        error: status.error
+      },
+      report: statusReport,
+      recommendations: status.isInstalled && status.canConvert 
+        ? ['LibreOffice is working correctly', 'PowerPoint conversion should work']
+        : [
+            'Install LibreOffice on the server',
+            'Ensure LibreOffice is in the system PATH',
+            'Check environment variables (LIBREOFFICE_PATH)',
+            'Verify LibreOffice has proper permissions'
+          ],
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('[TestRoute] LibreOffice test failed:', error);
+    next(createError(`LibreOffice test failed: ${error instanceof Error ? error.message : String(error)}`, 500));
   }
 });
 
