@@ -12,6 +12,7 @@ import { requestLogger } from './middleware/requestLogger';
 import mergeRoutes from './routes/merge';
 import healthRoutes from './routes/health';
 import powerpointRoutes from './routes/powerpoint';
+import testRoutes from './routes/test';
 
 // Load environment variables
 dotenv.config();
@@ -74,6 +75,7 @@ app.use(requestLogger);
 app.use('/api/health', healthRoutes);
 app.use('/api/merge', mergeRoutes);
 app.use('/api/powerpoint', powerpointRoutes);
+app.use('/api/test', testRoutes);
 
 // Serve static files from output directory
 app.use('/api/download', express.static(path.join(__dirname, '../', process.env.OUTPUT_DIR || './output')));
