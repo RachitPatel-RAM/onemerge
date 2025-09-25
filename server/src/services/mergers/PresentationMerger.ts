@@ -99,7 +99,7 @@ export class PresentationMerger {
       fs.renameSync(libreOfficePdfPath, tempPdfPath);
     }
     
-    console.log(`✅ PowerPoint converted with LibreOffice command: ${tempPdfPath}`);
+    console.log(`SUCCESS: PowerPoint converted with LibreOffice command: ${tempPdfPath}`);
     return tempPdfPath;
   }
 
@@ -121,7 +121,7 @@ export class PresentationMerger {
         
         try {
           fs.writeFileSync(tempPdfPath, done);
-          console.log(`✅ PowerPoint converted with libreoffice-convert: ${tempPdfPath}`);
+          console.log(`SUCCESS: PowerPoint converted with libreoffice-convert: ${tempPdfPath}`);
           resolve(tempPdfPath);
         } catch (writeError) {
           reject(new Error(`Failed to write converted PDF: ${writeError}`));
@@ -164,7 +164,7 @@ export class PresentationMerger {
       });
       
       // Filename
-      page.drawText(`📄 ${path.basename(filePath)}`, {
+      page.drawText(`File: ${path.basename(filePath)}`, {
         x: 50,
         y: height - 150,
         size: 16,
@@ -173,7 +173,7 @@ export class PresentationMerger {
       });
       
       // Mobile compatibility message
-      page.drawText('📱 Mobile-Friendly Notice:', {
+      page.drawText('Mobile-Friendly Notice:', {
         x: 50,
         y: height - 200,
         size: 14,
@@ -197,7 +197,7 @@ export class PresentationMerger {
         color: rgb(0, 0, 0),
       });
       
-      page.drawText('• Download the original PowerPoint file separately', {
+      page.drawText('- Download the original PowerPoint file separately', {
         x: 70,
         y: height - 280,
         size: 11,
@@ -205,7 +205,7 @@ export class PresentationMerger {
         color: rgb(0.3, 0.3, 0.3),
       });
       
-      page.drawText('• Use a desktop computer with LibreOffice for full conversion', {
+      page.drawText('- Use a desktop computer with LibreOffice for full conversion', {
         x: 70,
         y: height - 300,
         size: 11,
@@ -213,7 +213,7 @@ export class PresentationMerger {
         color: rgb(0.3, 0.3, 0.3),
       });
       
-      page.drawText('• Try our web-based converter (coming soon)', {
+      page.drawText('- Try our web-based converter (coming soon)', {
         x: 70,
         y: height - 320,
         size: 11,
@@ -249,7 +249,7 @@ export class PresentationMerger {
       const pdfBytes = await pdfDoc.save();
       fs.writeFileSync(tempPdfPath, pdfBytes);
       
-      console.log(`✅ Created mobile-friendly placeholder PDF: ${tempPdfPath}`);
+      console.log(`SUCCESS: Created mobile-friendly placeholder PDF: ${tempPdfPath}`);
       return tempPdfPath;
       
     } catch (error) {
