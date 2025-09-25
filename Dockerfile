@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     libreoffice-writer \
     libreoffice-calc \
     libreoffice-impress \
+    libreoffice-common \
     imagemagick \
     ghostscript \
     fontconfig \
@@ -28,6 +29,22 @@ RUN apt-get update && apt-get install -y \
     wget \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Verify LibreOffice installation
+RUN echo "🔍 Verifying LibreOffice installation..." && \
+    echo "📍 Checking LibreOffice binary locations:" && \
+    ls -la /usr/bin/libreoffice* || echo "No libreoffice binaries in /usr/bin/" && \
+    ls -la /usr/bin/soffice* || echo "No soffice binaries in /usr/bin/" && \
+    echo "📍 Checking LibreOffice directories:" && \
+    ls -la /usr/lib/libreoffice/ || echo "No LibreOffice directory in /usr/lib/" && \
+    echo "📍 Testing LibreOffice commands:" && \
+    which libreoffice && \
+    which soffice && \
+    echo "📍 Testing LibreOffice version:" && \
+    libreoffice --version && \
+    echo "📍 Testing soffice version:" && \
+    soffice --version && \
+    echo "✅ LibreOffice verification complete"
 
 # Configure LibreOffice for headless operation
 RUN mkdir -p /tmp/.config/libreoffice \

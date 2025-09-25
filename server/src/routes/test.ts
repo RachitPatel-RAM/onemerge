@@ -240,6 +240,112 @@ router.get('/libreoffice', async (req: Request, res: Response, next: NextFunctio
 });
 
 /**
+ * GET /api/test/system
+ * System diagnostics endpoint
+ */
+router.get('/system', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const execAsync = promisify(exec);
+    
+    const diagnostics: any = {
+      timestamp: new Date().toISOString(),
+      platform: process.platform,
+      arch: process.arch,
+      nodeVersion: process.version,
+      environment: process.env.NODE_ENV,
+      workingDirectory: process.cwd(),
+      environmentVariables: {
+        LIBREOFFICE_PATH: process.env.LIBREOFFICE_PATH,
+        PATH: process.env.PATH?.split(':').slice(0, 10), // First 10 PATH entries
+        HOME: process.env.HOME,
+        TMPDIR: process.env.TMPDIR
+      }
+    };
+
+    // Check if we're on Linux and can run system commands
+    if (process.platform === 'linux') {
+      try {
+        // Check LibreOffice packages
+        try {
+          const { stdout: dpkgResult } = await execAsync('dpkg -l | grep -i libreoffice', { timeout: 10000 });
+          diagnostics.libreofficePackages = dpkgResult.trim().split('\n').filter((line: string) => line.trim());
+        } catch (error) {
+          diagnostics.libreofficePackages = 'Error checking packages: ' + (error as Error).message;
+        }
+
+        // Check for LibreOffice files
+        try {
+          const { stdout: findResult } = await execAsync('find /usr -name "*libreoffice*" -type f 2>/dev/null | head -20', { timeout: 15000 });
+          diagnostics.libreofficeFiles = findResult.trim().split('\n').filter((line: string) => line.trim());
+        } catch (error) {
+          diagnostics.libreofficeFiles = 'Error finding files: ' + (error as Error).message;
+        }
+
+        // Check common binary locations
+        const commonPaths = [
+          '/usr/bin/libreoffice',
+          '/usr/bin/soffice',
+          '/usr/local/bin/libreoffice',
+          '/opt/libreoffice/program/soffice',
+          '/snap/bin/libreoffice',
+          '/usr/lib/libreoffice/program/soffice'
+        ];
+
+        diagnostics.pathChecks = {};
+        const fs = require('fs');
+        for (const path of commonPaths) {
+          try {
+            const exists = fs.existsSync(path);
+            diagnostics.pathChecks[path] = {
+              exists,
+              stats: exists ? fs.statSync(path) : null
+            };
+          } catch (error) {
+            diagnostics.pathChecks[path] = { error: (error as Error).message };
+          }
+        }
+
+        // Try to run which command
+        try {
+          const { stdout: whichResult } = await execAsync('which libreoffice soffice 2>/dev/null || echo "not found"', { timeout: 5000 });
+          diagnostics.whichCommands = whichResult.trim();
+        } catch (error) {
+          diagnostics.whichCommands = 'Error: ' + (error as Error).message;
+        }
+
+        // Check system info
+        try {
+          const { stdout: unameResult } = await execAsync('uname -a', { timeout: 5000 });
+          diagnostics.systemInfo = unameResult.trim();
+        } catch (error) {
+          diagnostics.systemInfo = 'Error: ' + (error as Error).message;
+        }
+
+        // Check available space
+        try {
+          const { stdout: dfResult } = await execAsync('df -h /', { timeout: 5000 });
+          diagnostics.diskSpace = dfResult.trim();
+        } catch (error) {
+          diagnostics.diskSpace = 'Error: ' + (error as Error).message;
+        }
+      } catch (error) {
+        diagnostics.systemCommandsError = (error as Error).message;
+      }
+    }
+
+    res.json({
+      success: true,
+      diagnostics
+    });
+  } catch (error) {
+    console.error('[TestRoute] System diagnostics failed:', error);
+    next(createError(`System diagnostics failed: ${error instanceof Error ? error.message : String(error)}`, 500));
+  }
+});
+
+/**
  * DELETE /api/test/cleanup
  * Clean up test files and temporary data
  */

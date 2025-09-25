@@ -93,33 +93,77 @@ export class LibreOfficeVerificationService {
       '/usr/local/bin/libreoffice',
       '/opt/libreoffice/program/soffice',
       '/usr/bin/soffice',
+      '/snap/bin/libreoffice', // Snap installation
+      '/usr/lib/libreoffice/program/soffice', // Alternative Debian location
       'soffice', // Try system PATH
       'libreoffice' // Alternative command
     ];
 
+    console.log('🔍 Searching for LibreOffice in the following paths:');
+    
     for (const testPath of possiblePaths) {
+      console.log(`   Testing: ${testPath}`);
+      
       try {
         if (testPath.includes('\\') || testPath.includes('/')) {
           // Absolute path - check if file exists
-          if (fs.existsSync(testPath)) {
+          const exists = fs.existsSync(testPath);
+          console.log(`     File exists: ${exists}`);
+          
+          if (exists) {
             // Test if it's executable
             try {
-              await execAsync(`"${testPath}" --version`, { timeout: 10000 });
+              const { stdout } = await execAsync(`"${testPath}" --version`, { timeout: 10000 });
+              console.log(`     ✅ Executable and working: ${testPath}`);
+              console.log(`     Version output: ${stdout.trim()}`);
               return testPath;
             } catch (error) {
-              console.warn(`Path exists but not executable: ${testPath}`);
+              console.warn(`     ❌ Path exists but not executable: ${testPath}`, error);
               continue;
             }
           }
         } else {
           // Command in PATH - test if it works
-          await execAsync(`${testPath} --version`, { timeout: 10000 });
-          return testPath;
+          try {
+            const { stdout } = await execAsync(`${testPath} --version`, { timeout: 10000 });
+            console.log(`     ✅ Found in PATH: ${testPath}`);
+            console.log(`     Version output: ${stdout.trim()}`);
+            return testPath;
+          } catch (error) {
+            console.log(`     ❌ Not found in PATH: ${testPath}`);
+          }
         }
       } catch (error) {
-        // Continue to next path
+        console.log(`     ❌ Error testing ${testPath}:`, error);
         continue;
       }
+    }
+
+    // Additional debugging - try to find any libreoffice-related files
+    console.log('🔍 Searching for any LibreOffice-related files...');
+    try {
+      const { stdout: findResult } = await execAsync('find /usr -name "*libreoffice*" -type f 2>/dev/null | head -10', { timeout: 15000 });
+      if (findResult.trim()) {
+        console.log('Found LibreOffice-related files:');
+        console.log(findResult);
+      } else {
+        console.log('No LibreOffice-related files found in /usr');
+      }
+    } catch (error) {
+      console.log('Could not search for LibreOffice files:', error);
+    }
+
+    // Check if LibreOffice package is installed
+    try {
+      const { stdout: dpkgResult } = await execAsync('dpkg -l | grep libreoffice', { timeout: 10000 });
+      if (dpkgResult.trim()) {
+        console.log('LibreOffice packages found:');
+        console.log(dpkgResult);
+      } else {
+        console.log('No LibreOffice packages found via dpkg');
+      }
+    } catch (error) {
+      console.log('Could not check dpkg for LibreOffice packages:', error);
     }
 
     return null;
