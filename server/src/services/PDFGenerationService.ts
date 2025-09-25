@@ -83,7 +83,7 @@ export class PDFGenerationService {
   ): Promise<void> {
     try {
       // Get image metadata
-      const metadata = await sharp(imageInput.buffer).metadata();
+      const metadata = await sharp(new Uint8Array(imageInput.buffer)).metadata();
       const imageWidth = imageInput.width || metadata.width || 1920;
       const imageHeight = imageInput.height || metadata.height || 1080;
 
@@ -120,13 +120,13 @@ export class PDFGenerationService {
       const imageFormat = this.detectImageFormat(imageInput.buffer);
 
       if (imageFormat === 'png') {
-        embeddedImage = await pdfDoc.embedPng(new Uint8Array(imageInput.buffer.buffer, imageInput.buffer.byteOffset, imageInput.buffer.byteLength));
+        embeddedImage = await pdfDoc.embedPng(new Uint8Array(imageInput.buffer));
       } else if (imageFormat === 'jpeg') {
-        embeddedImage = await pdfDoc.embedJpg(new Uint8Array(imageInput.buffer.buffer, imageInput.buffer.byteOffset, imageInput.buffer.byteLength));
+        embeddedImage = await pdfDoc.embedJpg(new Uint8Array(imageInput.buffer));
       } else {
         // Convert to PNG if unsupported format
-        const pngBuffer = await sharp(imageInput.buffer).png().toBuffer();
-        embeddedImage = await pdfDoc.embedPng(new Uint8Array(pngBuffer.buffer, pngBuffer.byteOffset, pngBuffer.byteLength));
+        const pngBuffer = await sharp(new Uint8Array(imageInput.buffer)).png().toBuffer();
+        embeddedImage = await pdfDoc.embedPng(new Uint8Array(pngBuffer));
       }
 
       // Calculate image placement
@@ -213,7 +213,7 @@ export class PDFGenerationService {
 
       for (const pdfPath of pdfPaths) {
         const pdfBytes = fs.readFileSync(pdfPath);
-        const pdf = await PDFDocument.load(new Uint8Array(pdfBytes.buffer, pdfBytes.byteOffset, pdfBytes.byteLength));
+        const pdf = await PDFDocument.load(new Uint8Array(pdfBytes));
         const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
         
         copiedPages.forEach((page) => mergedPdf.addPage(page));
@@ -251,7 +251,7 @@ export class PDFGenerationService {
    */
   private detectImageFormat(buffer: Buffer): 'png' | 'jpeg' | 'unknown' {
     // Convert Buffer to Uint8Array for proper type compatibility
-    const uint8Array = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    const uint8Array = new Uint8Array(buffer);
     
     // Check PNG signature
     if (uint8Array.length >= 8 && 
@@ -289,7 +289,7 @@ export class PDFGenerationService {
     options: { quality?: number; maxWidth?: number; maxHeight?: number } = {}
   ): Promise<Buffer> {
     try {
-      let sharpInstance = sharp(buffer);
+      let sharpInstance = sharp(new Uint8Array(buffer));
 
       // Resize if dimensions are specified
       if (options.maxWidth || options.maxHeight) {
@@ -300,7 +300,7 @@ export class PDFGenerationService {
       }
 
       // Convert to appropriate format with quality settings
-      const metadata = await sharp(buffer).metadata();
+      const metadata = await sharp(new Uint8Array(buffer)).metadata();
       
       if (metadata.hasAlpha) {
         // Use PNG for images with transparency
@@ -327,7 +327,7 @@ export class PDFGenerationService {
   }> {
     try {
       const pdfBytes = fs.readFileSync(filePath);
-      const pdf = await PDFDocument.load(new Uint8Array(pdfBytes.buffer, pdfBytes.byteOffset, pdfBytes.byteLength));
+      const pdf = await PDFDocument.load(new Uint8Array(pdfBytes));
       
       return {
         pageCount: pdf.getPageCount(),

@@ -164,49 +164,53 @@ export class MergeService {
     const presentationMerger = new PresentationMerger();
 
     const tempPdfPaths: string[] = [];
+    const conversionPromises: Promise<string>[] = [];
 
     try {
-      // Convert all files to PDF first
+      // Create conversion promises for parallel processing
       for (const [type, files] of fileGroups) {
         for (const file of files) {
-          let tempPdfPath: string;
-
-          switch (type) {
-            case 'pdf':
-              tempPdfPath = file.path;
-              break;
-            case 'docx':
-              tempPdfPath = await documentMerger.convertToPDF(file.path);
-              tempPdfPaths.push(tempPdfPath);
-              break;
-            case 'txt':
-              tempPdfPath = await textMerger.convertToPDF(file.path);
-              tempPdfPaths.push(tempPdfPath);
-              break;
-            case 'jpg':
-            case 'jpeg':
-            case 'png':
-              tempPdfPath = await imageMerger.convertToPDF(file.path);
-              tempPdfPaths.push(tempPdfPath);
-              break;
-            case 'xlsx':
-              tempPdfPath = await spreadsheetMerger.convertToPDF(file.path);
-              tempPdfPaths.push(tempPdfPath);
-              break;
-            case 'pptx':
-              tempPdfPath = await presentationMerger.convertToPDF(file.path);
-              tempPdfPaths.push(tempPdfPath);
-              break;
-            case 'csv':
-              tempPdfPath = await textMerger.convertCSVToPDF(file.path);
-              tempPdfPaths.push(tempPdfPath);
-              break;
-            default:
-              throw createError(`Cannot convert ${type} to PDF`, 400);
-          }
-
-          await pdfMerger.addFile(tempPdfPath);
+          const conversionPromise = this.convertFileToPDF(
+            file, 
+            type, 
+            documentMerger, 
+            imageMerger, 
+            textMerger, 
+            spreadsheetMerger, 
+            presentationMerger
+          );
+          conversionPromises.push(conversionPromise);
         }
+      }
+
+      // Process all conversions in parallel with controlled concurrency
+      const batchSize = Math.min(4, conversionPromises.length); // Limit concurrent operations
+      const convertedPdfPaths: string[] = [];
+      const originalFilePaths = new Set<string>();
+
+      // Track original PDF file paths
+      for (const [type, files] of fileGroups) {
+        if (type === 'pdf') {
+          files.forEach(file => originalFilePaths.add(file.path));
+        }
+      }
+
+      for (let i = 0; i < conversionPromises.length; i += batchSize) {
+        const batch = conversionPromises.slice(i, i + batchSize);
+        const batchResults = await Promise.all(batch);
+        convertedPdfPaths.push(...batchResults);
+        
+        // Track temp files for cleanup (exclude original PDFs)
+        batchResults.forEach(path => {
+          if (!originalFilePaths.has(path)) {
+            tempPdfPaths.push(path);
+          }
+        });
+      }
+
+      // Add all converted PDFs to merger in order
+      for (const pdfPath of convertedPdfPaths) {
+        await pdfMerger.addFile(pdfPath);
       }
 
       await pdfMerger.save(outputPath);
@@ -225,6 +229,37 @@ export class MergeService {
           fs.unlinkSync(tempPath);
         }
       });
+    }
+  }
+
+  private async convertFileToPDF(
+    file: Express.Multer.File,
+    type: string,
+    documentMerger: DocumentMerger,
+    imageMerger: ImageMerger,
+    textMerger: TextMerger,
+    spreadsheetMerger: SpreadsheetMerger,
+    presentationMerger: PresentationMerger
+  ): Promise<string> {
+    switch (type) {
+      case 'pdf':
+        return file.path;
+      case 'docx':
+        return await documentMerger.convertToPDF(file.path);
+      case 'txt':
+        return await textMerger.convertToPDF(file.path);
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        return await imageMerger.convertToPDF(file.path);
+      case 'xlsx':
+        return await spreadsheetMerger.convertToPDF(file.path);
+      case 'pptx':
+        return await presentationMerger.convertToPDF(file.path);
+      case 'csv':
+        return await textMerger.convertCSVToPDF(file.path);
+      default:
+        throw createError(`Cannot convert ${type} to PDF`, 400);
     }
   }
 
