@@ -11,6 +11,9 @@ export class TextMerger {
    */
   private sanitizeText(text: string): string {
     return text
+      // First, normalize line endings to Unix style (LF only)
+      .replace(/\r\n/g, '\n')  // Replace CRLF with LF
+      .replace(/\r/g, '\n')    // Replace standalone CR with LF
       // Replace common Unicode characters with ASCII alternatives
       .replace(/✅/g, '[CHECK]')
       .replace(/❌/g, '[X]')
@@ -29,17 +32,31 @@ export class TextMerger {
       .replace(/[—–]/g, '-')
       // Replace ellipsis with three dots
       .replace(/…/g, '...')
-      // Remove any remaining non-ASCII characters that might cause issues
-      .replace(/[^\x00-\xFF]/g, '?');
+      // Remove or replace problematic control characters
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control chars except \t, \n
+      // Replace any remaining non-printable characters
+      .replace(/[^\x20-\x7E\n\t]/g, '?');
   }
 
   async addTextFile(filePath: string): Promise<void> {
     try {
-      const content = fs.readFileSync(filePath, 'utf-8');
+      // Try to read with different encodings
+      let content: string;
+      try {
+        content = fs.readFileSync(filePath, 'utf-8');
+      } catch (utf8Error) {
+        try {
+          content = fs.readFileSync(filePath, 'latin1');
+        } catch (latin1Error) {
+          content = fs.readFileSync(filePath, 'ascii');
+        }
+      }
+      
+      const sanitizedContent = this.sanitizeText(content);
       const filename = path.basename(filePath);
       
       this.content.push(`--- Content from ${filename} ---`);
-      this.content.push(content);
+      this.content.push(sanitizedContent);
       this.content.push(''); // Empty line separator
     } catch (error) {
       throw new Error(`Failed to add text file: ${error}`);
@@ -99,7 +116,18 @@ export class TextMerger {
     const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
 
     try {
-      const content = fs.readFileSync(filePath, 'utf-8');
+      // Try to read with different encodings
+      let content: string;
+      try {
+        content = fs.readFileSync(filePath, 'utf-8');
+      } catch (utf8Error) {
+        try {
+          content = fs.readFileSync(filePath, 'latin1');
+        } catch (latin1Error) {
+          content = fs.readFileSync(filePath, 'ascii');
+        }
+      }
+      
       const sanitizedContent = this.sanitizeText(content);
       const lines = sanitizedContent.split('\n');
       
