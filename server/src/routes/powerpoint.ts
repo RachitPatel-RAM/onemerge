@@ -122,7 +122,7 @@ router.post('/convert-to-pdf', upload.single('file'), async (req, res) => {
     let libreOfficeDiagnostics = null;
     try {
       const verificationService = new LibreOfficeVerificationService();
-      libreOfficeDiagnostics = await verificationService.getLibreOfficeStatus();
+      libreOfficeDiagnostics = await verificationService.verifyLibreOfficeInstallation();
     } catch (diagError) {
       console.error('Failed to get LibreOffice diagnostics:', diagError);
     }
@@ -234,7 +234,7 @@ router.post('/convert-to-images', upload.single('file'), async (req, res) => {
     let libreOfficeDiagnostics = null;
     try {
       const verificationService = new LibreOfficeVerificationService();
-      libreOfficeDiagnostics = await verificationService.getLibreOfficeStatus();
+      libreOfficeDiagnostics = await verificationService.verifyLibreOfficeInstallation();
     } catch (diagError) {
       console.error('Failed to get LibreOffice diagnostics:', diagError);
     }
