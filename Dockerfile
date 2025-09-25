@@ -12,12 +12,10 @@ RUN npm run build
 FROM node:18-bullseye AS backend
 
 # Update package list and install system dependencies
-RUN apt-get update && apt-get install -y \
-    libreoffice \
-    libreoffice-writer \
-    libreoffice-calc \
-    libreoffice-impress \
-    libreoffice-common \
+RUN echo "🔄 Updating package lists..." && \
+    apt-get update && \
+    echo "📦 Installing basic dependencies first..." && \
+    apt-get install -y --no-install-recommends \
     imagemagick \
     ghostscript \
     fontconfig \
@@ -27,23 +25,47 @@ RUN apt-get update && apt-get install -y \
     fonts-noto \
     curl \
     wget \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    software-properties-common \
+    && echo "📦 Installing LibreOffice packages..." && \
+    (apt-get install -y --no-install-recommends \
+    libreoffice \
+    libreoffice-writer \
+    libreoffice-calc \
+    libreoffice-impress \
+    libreoffice-common \
+    libreoffice-core \
+    || echo "⚠️ Standard LibreOffice installation failed, trying alternative...") && \
+    echo "🧹 Cleaning up package cache..." && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    echo "📦 Package installation complete"
 
-# Verify LibreOffice installation
-RUN echo "🔍 Verifying LibreOffice installation..." && \
+# Verify LibreOffice installation with detailed debugging
+RUN echo "🔍 Starting LibreOffice verification..." && \
+    echo "📍 System information:" && \
+    uname -a && \
+    echo "📍 Checking installed packages:" && \
+    dpkg -l | grep -i libreoffice || echo "No LibreOffice packages found via dpkg" && \
+    echo "📍 Searching for LibreOffice files:" && \
+    find /usr -name "*libreoffice*" -type f 2>/dev/null | head -10 || echo "No LibreOffice files found" && \
     echo "📍 Checking LibreOffice binary locations:" && \
-    ls -la /usr/bin/libreoffice* || echo "No libreoffice binaries in /usr/bin/" && \
-    ls -la /usr/bin/soffice* || echo "No soffice binaries in /usr/bin/" && \
+    ls -la /usr/bin/libreoffice* 2>/dev/null || echo "No libreoffice binaries in /usr/bin/" && \
+    ls -la /usr/bin/soffice* 2>/dev/null || echo "No soffice binaries in /usr/bin/" && \
     echo "📍 Checking LibreOffice directories:" && \
-    ls -la /usr/lib/libreoffice/ || echo "No LibreOffice directory in /usr/lib/" && \
-    echo "📍 Testing LibreOffice commands:" && \
-    which libreoffice && \
-    which soffice && \
+    ls -la /usr/lib/libreoffice/ 2>/dev/null || echo "No LibreOffice directory in /usr/lib/" && \
+    echo "📍 Testing which commands:" && \
+    which libreoffice 2>/dev/null || echo "libreoffice not found in PATH" && \
+    which soffice 2>/dev/null || echo "soffice not found in PATH" && \
     echo "📍 Testing LibreOffice version:" && \
-    libreoffice --version && \
+    (libreoffice --version 2>/dev/null || echo "❌ libreoffice --version failed") && \
     echo "📍 Testing soffice version:" && \
-    soffice --version && \
+    (soffice --version 2>/dev/null || echo "❌ soffice --version failed") && \
+    echo "📍 Checking PATH:" && \
+    echo "PATH=$PATH" && \
+    echo "📍 Final verification - attempting to create a test file:" && \
+    (echo "Testing LibreOffice headless conversion..." && \
+     libreoffice --headless --invisible --nodefault --nolockcheck --nologo --norestore --convert-to pdf --outdir /tmp /dev/null 2>/dev/null || \
+     echo "❌ LibreOffice headless test failed") && \
     echo "✅ LibreOffice verification complete"
 
 # Configure LibreOffice for headless operation
