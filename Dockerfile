@@ -11,6 +11,17 @@ RUN npm run build
 # Backend stage
 FROM node:18-alpine AS backend
 
+# Install system dependencies including LibreOffice
+RUN apk add --no-cache \
+    libreoffice \
+    imagemagick \
+    ghostscript \
+    fontconfig \
+    ttf-dejavu \
+    ttf-liberation \
+    ttf-opensans \
+    && rm -rf /var/cache/apk/*
+
 WORKDIR /app
 
 # Copy server files
@@ -26,6 +37,10 @@ COPY --from=frontend-build /app/dist ./public
 
 # Create necessary directories
 RUN mkdir -p uploads output temp
+
+# Set LibreOffice environment variables
+ENV LIBREOFFICE_PATH=/usr/bin/libreoffice
+ENV MAGICK_PATH=/usr/bin/convert
 
 # Expose port
 EXPOSE 10000

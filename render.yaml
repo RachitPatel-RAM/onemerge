@@ -13,6 +13,16 @@ services:
         value: 10000
       - key: CORS_ORIGIN
         value: https://onemerge-frontend.onrender.com
+      - key: LIBREOFFICE_PATH
+        value: /usr/bin/libreoffice
+      - key: MAGICK_PATH
+        value: /usr/bin/convert
+      - key: TEMP_DIR
+        value: /tmp
+      - key: UPLOAD_DIR
+        value: /tmp/uploads
+      - key: OUTPUT_DIR
+        value: /tmp/output
     
   # Frontend Static Site
   - type: web

@@ -97,6 +97,7 @@ export class PresentationMerger {
   private async convertWithEnhancedLibreOffice(filePath: string, tempDir: string, tempPdfPath: string): Promise<string> {
     // Try multiple LibreOffice paths for better compatibility
     const possiblePaths = [
+      process.env.LIBREOFFICE_PATH || '/usr/bin/libreoffice', // Environment variable first
       'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
       'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe',
       '/usr/bin/libreoffice',
@@ -289,18 +290,31 @@ export class PresentationMerger {
               slideText = slideText.concat(extractedText);
             });
             
-            // Extract image references
-            const imageRefs = slideContent.match(/r:embed="[^"]*"/g) || [];
+            // Extract image references with multiple patterns
+            const imagePatterns = [
+              /r:embed="([^"]*)"/g,
+              /r:link="([^"]*)"/g,
+              /<a:blip[^>]*r:embed="([^"]*)"/g,
+              /<p:pic[^>]*r:embed="([^"]*)"/g
+            ];
+            
             const slideImages: string[] = [];
-            imageRefs.forEach((ref: string) => {
-              const imageId = ref.match(/r:embed="([^"]*)"/)?.[1];
-              if (imageId) {
-                // Find corresponding media file
-                const mediaEntry = entries.find((e: any) => e.entryName.includes(imageId));
-                if (mediaEntry) {
-                  slideImages.push(mediaEntry.entryName);
+            imagePatterns.forEach(pattern => {
+              const matches = slideContent.match(pattern) || [];
+              matches.forEach((match: string) => {
+                const imageId = match.match(/r:embed="([^"]*)"/)?.[1] || match.match(/r:link="([^"]*)"/)?.[1];
+                if (imageId) {
+                  // Find corresponding media file by checking relationships
+                  const mediaEntry = entries.find((e: any) => 
+                    e.entryName.includes(imageId) || 
+                    e.entryName.includes(`media/image${imageId}`) ||
+                    e.entryName.includes(`media/media${imageId}`)
+                  );
+                  if (mediaEntry && !slideImages.includes(mediaEntry.entryName)) {
+                    slideImages.push(mediaEntry.entryName);
+                  }
                 }
-              }
+              });
             });
             
             // Remove duplicates and clean up text
@@ -404,34 +418,57 @@ export class PresentationMerger {
                 const imageBuffer = imageEntry.getData();
                 const imageName = path.basename(slide.images[i]);
                 
-                // Try to embed image
+                // Try to embed image with better format detection
                 let embeddedImage;
                 try {
-                  if (imageName.toLowerCase().endsWith('.png')) {
-                    embeddedImage = await pdfDoc.embedPng(new Uint8Array(imageBuffer));
-                  } else if (imageName.toLowerCase().match(/\.(jpg|jpeg)$/)) {
-                    embeddedImage = await pdfDoc.embedJpg(new Uint8Array(imageBuffer));
+                  // Check file signature for better format detection
+                  const uint8Array = new Uint8Array(imageBuffer);
+                  const isPNG = uint8Array.length >= 8 && 
+                    uint8Array[0] === 0x89 && uint8Array[1] === 0x50 && 
+                    uint8Array[2] === 0x4E && uint8Array[3] === 0x47;
+                  const isJPEG = uint8Array.length >= 2 && 
+                    uint8Array[0] === 0xFF && uint8Array[1] === 0xD8;
+                  
+                  if (isPNG || imageName.toLowerCase().endsWith('.png')) {
+                    embeddedImage = await pdfDoc.embedPng(uint8Array);
+                  } else if (isJPEG || imageName.toLowerCase().match(/\.(jpg|jpeg)$/)) {
+                    embeddedImage = await pdfDoc.embedJpg(uint8Array);
+                  } else {
+                    // Try to detect format from content
+                    console.log(`Unknown image format for ${imageName}, attempting PNG embedding`);
+                    try {
+                      embeddedImage = await pdfDoc.embedPng(uint8Array);
+                    } catch (pngError) {
+                      try {
+                        embeddedImage = await pdfDoc.embedJpg(uint8Array);
+                      } catch (jpegError) {
+                        throw new Error(`Unsupported image format: ${imageName}`);
+                      }
+                    }
                   }
                   
                   if (embeddedImage) {
-                    // Scale image to fit
+                    // Scale image to fit with better aspect ratio handling
                     const maxWidth = slideWidth - (margin * 2);
-                    const maxHeight = 200;
+                    const maxHeight = 250;
                     const scale = Math.min(maxWidth / embeddedImage.width, maxHeight / embeddedImage.height, 1);
+                    
+                    const scaledWidth = embeddedImage.width * scale;
+                    const scaledHeight = embeddedImage.height * scale;
                     
                     page.drawImage(embeddedImage, {
                       x: margin,
-                      y: currentY - (embeddedImage.height * scale),
-                      width: embeddedImage.width * scale,
-                      height: embeddedImage.height * scale,
+                      y: currentY - scaledHeight,
+                      width: scaledWidth,
+                      height: scaledHeight,
                     });
                     
-                    currentY -= (embeddedImage.height * scale) + 10;
-                    console.log(`Successfully embedded image: ${imageName}`);
+                    currentY -= scaledHeight + 15;
+                    console.log(`Successfully embedded image: ${imageName} (${scaledWidth}x${scaledHeight})`);
                   }
                 } catch (imageError) {
                   console.warn(`Failed to embed image ${imageName}:`, imageError);
-                  // Add text placeholder for failed image
+                  // Add enhanced text placeholder for failed image
                   page.drawText(`[Image: ${imageName}]`, {
                     x: margin,
                     y: currentY,
@@ -439,7 +476,14 @@ export class PresentationMerger {
                     font,
                     color: rgb(0.5, 0.5, 0.5),
                   });
-                  currentY -= 20;
+                  page.drawText(`(Size: ${(imageBuffer.length / 1024).toFixed(1)}KB)`, {
+                    x: margin,
+                    y: currentY - 15,
+                    size: 8,
+                    font,
+                    color: rgb(0.4, 0.4, 0.4),
+                  });
+                  currentY -= 35;
                 }
               }
             } catch (imageProcessError) {
