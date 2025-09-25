@@ -23,6 +23,12 @@ services:
         value: /tmp/uploads
       - key: OUTPUT_DIR
         value: /tmp/output
+      - key: HOME
+        value: /tmp
+      - key: TMPDIR
+        value: /tmp
+      - key: DISPLAY
+        value: ":99"
     
   # Frontend Static Site
   - type: web

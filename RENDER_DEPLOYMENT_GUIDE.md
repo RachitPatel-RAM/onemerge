@@ -5,12 +5,13 @@ Your PowerPoint conversion was failing because LibreOffice wasn't installed on t
 
 ## What's Been Updated
 
-### 1. Dockerfile Updates
-- ✅ Added LibreOffice installation
-- ✅ Added ImageMagick for image processing
-- ✅ Added Ghostscript for PDF processing
-- ✅ Added essential fonts (DejaVu, Liberation, OpenSans)
-- ✅ Set environment variables for LibreOffice paths
+### 1. Dockerfile Updates (Enhanced for Render)
+- ✅ **Switched to Debian base image** (node:18-bullseye) for better LibreOffice support
+- ✅ **Complete LibreOffice suite installation** (writer, calc, impress)
+- ✅ **Enhanced font support** (DejaVu, Liberation, OpenSans, Noto)
+- ✅ **ImageMagick and Ghostscript** for image/PDF processing
+- ✅ **Headless operation configuration** with proper temp directories
+- ✅ **Environment variables** for LibreOffice paths and temp directories
 
 ### 2. Enhanced PPTX Parsing
 - ✅ Improved image extraction from PPTX files
@@ -106,18 +107,29 @@ The following environment variables are now configured in render.yaml:
   value: /tmp/uploads
 - key: OUTPUT_DIR
   value: /tmp/output
+- key: HOME
+  value: /tmp
+- key: TMPDIR
+  value: /tmp
+- key: DISPLAY
+  value: ":99"
 ```
 
 ## Dependencies Installed
 
-The Dockerfile now installs:
-- `libreoffice` - For PowerPoint to PDF conversion
+The Dockerfile now installs (on Debian base):
+- `libreoffice` - Core LibreOffice suite
+- `libreoffice-writer` - Word processing component
+- `libreoffice-calc` - Spreadsheet component  
+- `libreoffice-impress` - Presentation component
 - `imagemagick` - For image processing
 - `ghostscript` - For PDF processing
 - `fontconfig` - For font management
-- `ttf-dejavu` - DejaVu fonts
-- `ttf-liberation` - Liberation fonts
-- `ttf-opensans` - OpenSans fonts
+- `fonts-dejavu` - DejaVu fonts
+- `fonts-liberation` - Liberation fonts
+- `fonts-opensans` - OpenSans fonts
+- `fonts-noto` - Noto fonts for better Unicode support
+- `curl` & `wget` - For downloading additional resources
 
 ## Testing Your Deployment
 

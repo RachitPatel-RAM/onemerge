@@ -9,18 +9,29 @@ COPY . .
 RUN npm run build
 
 # Backend stage
-FROM node:18-alpine AS backend
+FROM node:18-bullseye AS backend
 
-# Install system dependencies including LibreOffice
-RUN apk add --no-cache \
+# Update package list and install system dependencies
+RUN apt-get update && apt-get install -y \
     libreoffice \
+    libreoffice-writer \
+    libreoffice-calc \
+    libreoffice-impress \
     imagemagick \
     ghostscript \
     fontconfig \
-    ttf-dejavu \
-    ttf-liberation \
-    ttf-opensans \
-    && rm -rf /var/cache/apk/*
+    fonts-dejavu \
+    fonts-liberation \
+    fonts-opensans \
+    fonts-noto \
+    curl \
+    wget \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure LibreOffice for headless operation
+RUN mkdir -p /tmp/.config/libreoffice \
+    && chmod 777 /tmp/.config/libreoffice
 
 WORKDIR /app
 
@@ -41,6 +52,8 @@ RUN mkdir -p uploads output temp
 # Set LibreOffice environment variables
 ENV LIBREOFFICE_PATH=/usr/bin/libreoffice
 ENV MAGICK_PATH=/usr/bin/convert
+ENV HOME=/tmp
+ENV TMPDIR=/tmp
 
 # Expose port
 EXPOSE 10000

@@ -9,6 +9,25 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
+# Set environment variables for LibreOffice (if running on server)
+export HOME=/tmp
+export TMPDIR=/tmp
+export DISPLAY=:99
+
+# Create necessary directories (if running on server)
+mkdir -p /tmp/uploads 2>/dev/null || true
+mkdir -p /tmp/output 2>/dev/null || true
+mkdir -p /tmp/.config/libreoffice 2>/dev/null || true
+
+# Test LibreOffice installation (if available)
+echo "🔍 Testing LibreOffice installation..."
+if command -v libreoffice &> /dev/null; then
+    echo "✅ LibreOffice found at: $(which libreoffice)"
+    libreoffice --version 2>/dev/null || echo "LibreOffice version check failed (normal on some systems)"
+else
+    echo "⚠️  LibreOffice not found locally (will be installed on Render)"
+fi
+
 # Build the project
 echo "📦 Building the project..."
 npm run build
@@ -47,9 +66,12 @@ echo "   - Upload a .pptx file"
 echo "   - Check that it converts with proper slide structure"
 echo "   - Verify images and graphics are preserved"
 echo ""
-echo "📋 Environment Variables (if needed):"
+echo "📋 Environment Variables (automatically set in render.yaml):"
 echo "   LIBREOFFICE_PATH=/usr/bin/libreoffice"
 echo "   MAGICK_PATH=/usr/bin/convert"
+echo "   HOME=/tmp"
+echo "   TMPDIR=/tmp"
+echo "   DISPLAY=:99"
 echo ""
 echo "🔧 Troubleshooting:"
 echo "   - If deployment fails, check the build logs in Render"
