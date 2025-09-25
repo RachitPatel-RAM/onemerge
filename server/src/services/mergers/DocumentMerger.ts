@@ -388,15 +388,15 @@ export class DocumentMerger {
       summaryY -= lineHeight * 1.5;
       
       const features = [
-        '✓ Text content and paragraphs',
-        '✓ Basic formatting (bold, italic)',
-        '✓ Document structure',
-        '✓ Word wrapping and pagination',
-        '⚠ Limited: Complex formatting, images, tables'
+        '+ Text content and paragraphs',
+        '+ Basic formatting (bold, italic)',
+        '+ Document structure',
+        '+ Word wrapping and pagination',
+        '! Limited: Complex formatting, images, tables'
       ];
       
       features.forEach(feature => {
-        const color = feature.startsWith('⚠') ? rgb(0.8, 0.5, 0) : rgb(0, 0.5, 0);
+        const color = feature.startsWith('!') ? rgb(0.8, 0.5, 0) : rgb(0, 0.5, 0);
         summaryPage.drawText(feature, {
           x: margin + 20,
           y: summaryY,
@@ -499,15 +499,15 @@ export class DocumentMerger {
         });
         
         const analysisItems = [
-          `✓ Document entries: ${entries.length}`,
-          `✓ Main content size: ${(documentXmlSize / 1024).toFixed(2)} KB`,
-          `${hasImages ? '✓' : '✗'} Contains images/media`,
-          `${hasMedia ? '✓' : '✗'} Contains embedded objects`,
-          `✓ DOCX structure validated`
+          `+ Document entries: ${entries.length}`,
+          `+ Main content size: ${(documentXmlSize / 1024).toFixed(2)} KB`,
+          `${hasImages ? '+' : '-'} Contains images/media`,
+          `${hasMedia ? '+' : '-'} Contains embedded objects`,
+          `+ DOCX structure validated`
         ];
         
         analysisItems.forEach(item => {
-          const color = item.startsWith('✗') ? rgb(0.8, 0, 0) : rgb(0, 0.6, 0);
+          const color = item.startsWith('-') ? rgb(0.8, 0, 0) : rgb(0, 0.6, 0);
           page.drawText(item, {
             x: margin + 20,
             y: currentY,
@@ -519,7 +519,7 @@ export class DocumentMerger {
         });
         
       } catch (analysisError) {
-        page.drawText('⚠ Could not analyze document structure', {
+        page.drawText('! Could not analyze document structure', {
           x: margin + 20,
           y: currentY,
           size: 11,
@@ -571,10 +571,10 @@ export class DocumentMerger {
       currentY -= lineHeight * 1.5;
       
       const recommendations = [
-        '• Install LibreOffice for automatic high-fidelity conversion',
-        '• Use online conversion services for complex documents',
-        '• Consider Puppeteer with HTML conversion for web-based rendering',
-        '• Implement mammoth.js for better DOCX to HTML conversion'
+        '- Install LibreOffice for automatic high-fidelity conversion',
+        '- Use online conversion services for complex documents',
+        '- Consider Puppeteer with HTML conversion for web-based rendering',
+        '- Implement mammoth.js for better DOCX to HTML conversion'
       ];
       
       recommendations.forEach(rec => {

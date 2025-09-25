@@ -385,11 +385,11 @@ export class SpreadsheetMerger {
       summaryY -= lineHeight * 1.5;
       
       const features = [
-        '✓ Cell formulas with calculated values',
-        '✓ Data types (numbers, dates, text)',
-        '✓ Table structure and formatting',
-        '✓ Multi-sheet organization',
-        '✓ Optimized column widths'
+        '+ Cell formulas with calculated values',
+        '+ Data types (numbers, dates, text)',
+        '+ Table structure and formatting',
+        '+ Multi-sheet organization',
+        '+ Optimized column widths'
       ];
       
       features.forEach(feature => {
