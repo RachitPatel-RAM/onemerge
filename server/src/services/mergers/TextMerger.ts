@@ -32,10 +32,12 @@ export class TextMerger {
       .replace(/[—–]/g, '-')
       // Replace ellipsis with three dots
       .replace(/…/g, '...')
+      // Replace tab characters with spaces (4 spaces to preserve formatting)
+      .replace(/\t/g, '    ')
       // Remove or replace problematic control characters
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control chars except \t, \n
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control chars except \n
       // Replace any remaining non-printable characters
-      .replace(/[^\x20-\x7E\n\t]/g, '?');
+      .replace(/[^\x20-\x7E\n]/g, '?');
   }
 
   async addTextFile(filePath: string): Promise<void> {
