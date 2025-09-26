@@ -72,25 +72,22 @@ router.post('/convert-to-pdf', upload.single('file'), async (req, res) => {
       margin: parseInt(req.body.margin) || 0
     };
 
-    // Initialize services
-    const powerPointService = new PowerPointService();
-    const pdfService = new PDFGenerationService();
+    // Use PresentationMerger for direct and efficient PPT to PDF conversion
+    const { PresentationMerger } = require('../services/mergers/PresentationMerger');
+    const presentationMerger = new PresentationMerger();
 
-    // Convert PowerPoint to images
-    const slideImages = await powerPointService.convertToImages(filePath, conversionOptions);
+    console.log(`Starting optimized PowerPoint to PDF conversion for: ${originalName}`);
+    const startTime = Date.now();
 
-    if (slideImages.length === 0) {
-      throw new Error('No slides found in the PowerPoint file');
-    }
+    // Direct conversion using PresentationMerger (much faster)
+    const pdfPath = await presentationMerger.convertToPDF(filePath);
+    
+    const conversionTime = Date.now() - startTime;
+    console.log(`PowerPoint conversion completed in ${conversionTime}ms`);
 
-    // Generate PDF filename
-    const pdfFileName = `${baseName}_converted_${Date.now()}.pdf`;
-
-    // Create PDF from slides
-    const pdfPath = await pdfService.createPDFFromSlides(slideImages, pdfFileName, pdfOptions);
-
-    // Get PDF info
-    const pdfInfo = await pdfService.getPDFInfo(pdfPath);
+    // Get basic PDF info
+    const pdfStats = fs.statSync(pdfPath);
+    const pdfFileName = path.basename(pdfPath);
 
     // Clean up uploaded file
     fs.unlinkSync(filePath);
@@ -103,8 +100,8 @@ router.post('/convert-to-pdf', upload.single('file'), async (req, res) => {
         originalFileName: originalName,
         pdfFileName: pdfFileName,
         pdfPath: pdfPath,
-        slideCount: slideImages.length,
-        pdfInfo: pdfInfo,
+        fileSize: pdfStats.size,
+        conversionTime: conversionTime,
         conversionOptions: conversionOptions,
         pdfOptions: pdfOptions
       }
