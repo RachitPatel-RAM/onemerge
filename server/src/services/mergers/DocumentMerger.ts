@@ -247,41 +247,45 @@ export class DocumentMerger {
       throw new Error('LibreOffice is installed but cannot convert documents');
     }
     
-    const outputDir = path.dirname(outputPath);
+    const outputDir = path.resolve(path.dirname(outputPath));
     const inputFileName = path.basename(filePath, '.docx');
     const expectedOutputPath = path.join(outputDir, `${inputFileName}.pdf`);
+    const absoluteFilePath = path.resolve(filePath);
     
     try {
-      // Simplified LibreOffice command for better compatibility
-      const command = `"${status.path}" --invisible --convert-to pdf --outdir "${outputDir}" "${filePath}"`;
+      // Use absolute paths to avoid issues with cwd
+      const command = `"${status.path}" --invisible --convert-to pdf --outdir "${outputDir}" "${absoluteFilePath}"`;
       
-      console.log(`Executing LibreOffice conversion with path: ${status.path}`);
-      console.log(`Command: ${command}`);
+      // Clean up any existing output file first
+      if (fs.existsSync(expectedOutputPath)) {
+        fs.unlinkSync(expectedOutputPath);
+      }
       
       const { stdout, stderr } = await execAsync(command, { 
-        timeout: 30000,
-        cwd: outputDir
+        timeout: 30000
       });
       
       if (stderr && !stderr.includes('Warning')) {
         throw new Error(`LibreOffice error: ${stderr}`);
       }
       
-      // Check if conversion was successful
-      if (fs.existsSync(expectedOutputPath)) {
-        const stats = fs.statSync(expectedOutputPath);
-        if (stats.size > 0) {
-          // Move to desired output path if different
-          if (expectedOutputPath !== outputPath) {
-            fs.renameSync(expectedOutputPath, outputPath);
-          }
-          
-          console.log(`LibreOffice conversion successful: ${stats.size} bytes`);
-          return outputPath;
-        }
+      // Add a small delay to ensure file system operations complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (!fs.existsSync(expectedOutputPath)) {
+        throw new Error('LibreOffice conversion produced empty or missing file');
       }
       
-      throw new Error('LibreOffice conversion produced empty or missing file');
+      const outputStats = fs.statSync(expectedOutputPath);
+      if (outputStats.size === 0) {
+        throw new Error('LibreOffice conversion produced empty file');
+      }
+      
+      // Rename the file to the final output path
+      fs.renameSync(expectedOutputPath, outputPath);
+      
+      console.log(`LibreOffice conversion successful: ${outputStats.size} bytes`);
+      return outputPath;
     } catch (error) {
       throw new Error(`LibreOffice conversion failed: ${error}`);
     }
