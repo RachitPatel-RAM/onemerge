@@ -65,6 +65,7 @@ export class ApiService {
       const response = await fetch(`${API_BASE_URL}/merge/files`, {
         method: 'POST',
         body: formData,
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -81,7 +82,9 @@ export class ApiService {
 
   static async getSupportedFormats(): Promise<SupportedFormatsResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/merge/supported-formats`);
+      const response = await fetch(`${API_BASE_URL}/merge/supported-formats`, {
+        credentials: 'include',
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -96,7 +99,9 @@ export class ApiService {
 
   static async checkHealth(): Promise<{ status: string; timestamp: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/health`);
+      const response = await fetch(`${API_BASE_URL}/health`, {
+        credentials: 'include',
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -166,6 +171,7 @@ export class ApiService {
       const response = await fetch(`${API_BASE_URL}/powerpoint/convert-to-pdf`, {
         method: 'POST',
         body: formData,
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -212,6 +218,7 @@ export class ApiService {
       const response = await fetch(`${API_BASE_URL}/powerpoint/convert-to-images`, {
         method: 'POST',
         body: formData,
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -231,7 +238,9 @@ export class ApiService {
     outputFormats: string[];
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/powerpoint/supported-formats`);
+      const response = await fetch(`${API_BASE_URL}/powerpoint/supported-formats`, {
+        credentials: 'include',
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
