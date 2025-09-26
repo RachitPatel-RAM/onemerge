@@ -3,6 +3,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { LibreOfficeVerificationService } from '../LibreOfficeVerificationService';
 
 const execAsync = promisify(exec);
 
@@ -52,7 +53,7 @@ export class PresentationMerger {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    // Validate input file
+    // Enhanced input validation
     if (!fs.existsSync(filePath)) {
       throw new Error(`Input file does not exist: ${filePath}`);
     }
@@ -62,80 +63,104 @@ export class PresentationMerger {
       throw new Error(`Input file is empty: ${filePath}`);
     }
 
+    // Check file extension
+    const fileExt = path.extname(filePath).toLowerCase();
+    if (!['.pptx', '.ppt'].includes(fileExt)) {
+      throw new Error(`Unsupported presentation format: ${fileExt}`);
+    }
+
     console.log(`Starting high-fidelity PPTX to PDF conversion for: ${path.basename(filePath)} (${fileStats.size} bytes)`);
+
+    const conversionErrors: string[] = [];
 
     // Strategy 1: Enhanced LibreOffice command line with quality settings (best quality)
     try {
-      return await this.convertWithEnhancedLibreOffice(filePath, tempDir, tempPdfPath);
+      console.log('Attempting Strategy 1: Enhanced LibreOffice conversion...');
+      const result = await this.convertWithEnhancedLibreOffice(filePath, tempDir, tempPdfPath + '_libreoffice.pdf');
+      if (result && fs.existsSync(result)) {
+        const outputStats = fs.statSync(result);
+        if (outputStats.size > 0) {
+          console.log(`SUCCESS: Enhanced LibreOffice conversion completed (${outputStats.size} bytes)`);
+          return result;
+        }
+      }
+      throw new Error('LibreOffice produced empty or invalid output');
     } catch (error) {
-      console.warn(`Enhanced LibreOffice conversion failed: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMsg = `Enhanced LibreOffice conversion failed: ${error instanceof Error ? error.message : String(error)}`;
+      console.warn(errorMsg);
+      conversionErrors.push(errorMsg);
     }
 
     // Strategy 2: Try libreoffice-convert package with validation (cloud-friendly)
     try {
-      return await this.convertWithLibreOfficePackage(filePath, tempPdfPath);
+      console.log('Attempting Strategy 2: LibreOffice package conversion...');
+      const result = await this.convertWithLibreOfficePackage(filePath, tempPdfPath + '_package.pdf');
+      if (result && fs.existsSync(result)) {
+        const outputStats = fs.statSync(result);
+        if (outputStats.size > 0) {
+          console.log(`SUCCESS: LibreOffice package conversion completed (${outputStats.size} bytes)`);
+          return result;
+        }
+      }
+      throw new Error('LibreOffice package produced empty or invalid output');
     } catch (error) {
-      console.warn(`LibreOffice package failed: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMsg = `LibreOffice package failed: ${error instanceof Error ? error.message : String(error)}`;
+      console.warn(errorMsg);
+      conversionErrors.push(errorMsg);
     }
 
     // Strategy 3: Try PPTX parsing with manual PDF generation (high-fidelity fallback)
     try {
-      console.log('Attempting PPTX parsing conversion...');
-      const result = await this.convertWithPPTXParsing(filePath, tempPdfPath);
-      console.log('PPTX parsing conversion succeeded!');
-      return result;
+      console.log('Attempting Strategy 3: PPTX parsing conversion...');
+      const result = await this.convertWithPPTXParsing(filePath, tempPdfPath + '_parsed.pdf');
+      if (result && fs.existsSync(result)) {
+        const outputStats = fs.statSync(result);
+        if (outputStats.size > 0) {
+          console.log(`SUCCESS: PPTX parsing conversion completed (${outputStats.size} bytes)`);
+          return result;
+        }
+      }
+      throw new Error('PPTX parsing produced empty or invalid output');
     } catch (error) {
-      console.error(`PPTX parsing conversion failed: ${error instanceof Error ? error.message : String(error)}`);
-      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
+      const errorMsg = `PPTX parsing conversion failed: ${error instanceof Error ? error.message : String(error)}`;
+      console.error(errorMsg);
+      conversionErrors.push(errorMsg);
     }
 
     // Strategy 4: Create informative placeholder PDF with file analysis (last resort)
-    console.warn('All conversion methods failed, creating placeholder PDF');
-    return await this.createEnhancedPlaceholderPDF(filePath, tempPdfPath);
+    try {
+      console.log('Attempting Strategy 4: Enhanced placeholder with file analysis...');
+      const result = await this.createEnhancedPlaceholderPDF(filePath, tempPdfPath + '_placeholder.pdf');
+      if (result && fs.existsSync(result)) {
+        const outputStats = fs.statSync(result);
+        console.log(`SUCCESS: Enhanced placeholder PDF created (${outputStats.size} bytes)`);
+        console.log('Previous conversion errors:', conversionErrors);
+        return result;
+      }
+      throw new Error('Placeholder generation failed');
+    } catch (placeholderError) {
+      conversionErrors.push(`Placeholder generation failed: ${placeholderError}`);
+      throw new Error(`All PPTX conversion strategies failed. Errors: ${conversionErrors.join('; ')}`);
+    }
   }
 
   private async convertWithEnhancedLibreOffice(filePath: string, tempDir: string, tempPdfPath: string): Promise<string> {
-    // Try multiple LibreOffice paths for better compatibility
-    const possiblePaths = [
-      process.env.LIBREOFFICE_PATH || '/usr/bin/libreoffice', // Environment variable first
-      'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
-      'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe',
-      '/usr/bin/libreoffice',
-      '/usr/local/bin/libreoffice',
-      '/opt/libreoffice/program/soffice',
-      'soffice', // Try system PATH
-      'libreoffice' // Alternative command
-    ];
-
-    let libreOfficePath = '';
-    for (const testPath of possiblePaths) {
-      try {
-        if (testPath.includes('\\') || testPath.includes('/')) {
-          // Absolute path - check if file exists
-          if (fs.existsSync(testPath)) {
-            libreOfficePath = testPath;
-            break;
-          }
-        } else {
-          // Command in PATH - test if it works
-          await execAsync(`${testPath} --version`, { timeout: 5000 });
-          libreOfficePath = testPath;
-          break;
-        }
-      } catch (error) {
-        // Continue to next path
-        continue;
-      }
+    // Get LibreOffice path from verification service
+    const libreOfficeService = LibreOfficeVerificationService.getInstance();
+    const status = await libreOfficeService.verifyLibreOfficeInstallation();
+    
+    if (!status.isInstalled || !status.path) {
+      throw new Error('LibreOffice is not installed or not found');
+    }
+    
+    if (!status.canConvert) {
+      throw new Error('LibreOffice is installed but cannot convert documents');
     }
 
-    if (!libreOfficePath) {
-      throw new Error('LibreOffice not found. Please install LibreOffice or ensure it is in the system PATH.');
-    }
-
-    console.log(`Using LibreOffice at: ${libreOfficePath}`);
+    console.log(`Using LibreOffice at: ${status.path}`);
 
     // Enhanced LibreOffice command with quality and fidelity settings
-    const command = `"${libreOfficePath}" --headless --invisible --nodefault --nolockcheck --nologo --norestore --convert-to "pdf:writer_pdf_Export:{'Quality':100,'ReduceImageResolution':false,'MaxImageResolution':300,'EmbedStandardFonts':true,'UseTaggedPDF':true,'SelectPdfVersion':1}" --outdir "${tempDir}" "${filePath}"`;
+    const command = `"${status.path}" --invisible --nodefault --nolockcheck --nologo --norestore --convert-to "pdf:writer_pdf_Export:{'Quality':100,'ReduceImageResolution':false,'MaxImageResolution':300,'EmbedStandardFonts':true,'UseTaggedPDF':true,'SelectPdfVersion':1}" --outdir "${tempDir}" "${filePath}"`;
     
     console.log(`Converting PowerPoint with enhanced LibreOffice settings`);
     

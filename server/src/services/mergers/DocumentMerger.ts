@@ -2,6 +2,10 @@ import { Document, Packer, Paragraph, TextRun, ImageRun } from 'docx';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { LibreOfficeVerificationService } from '../LibreOfficeVerificationService';
+
+const AdmZip = require('adm-zip');
+const mammoth = require('mammoth');
 
 export class DocumentMerger {
   private paragraphs: Paragraph[] = [];
@@ -110,7 +114,7 @@ export class DocumentMerger {
     const tempDir = process.env.TEMP_DIR || './temp';
     const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
 
-    // Validate input file
+    // Enhanced input validation
     if (!fs.existsSync(filePath)) {
       throw new Error(`Input file does not exist: ${filePath}`);
     }
@@ -120,36 +124,106 @@ export class DocumentMerger {
       throw new Error(`Input file is empty: ${filePath}`);
     }
 
+    // Validate file extension
+    const fileExtension = path.extname(filePath).toLowerCase();
+    if (fileExtension !== '.docx') {
+      throw new Error(`Invalid file type: ${fileExtension}. Expected .docx`);
+    }
+
+    // Validate DOCX file structure
+    try {
+      const AdmZip = require('adm-zip');
+      const zip = new AdmZip(filePath);
+      const entries = zip.getEntries();
+      const hasDocumentXml = entries.some((entry: any) => entry.entryName === 'word/document.xml');
+      if (!hasDocumentXml) {
+        throw new Error('Invalid DOCX file: missing word/document.xml');
+      }
+    } catch (zipError) {
+      throw new Error(`Invalid DOCX file structure: ${zipError}`);
+    }
+
+    // Ensure temp directory exists
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
     console.log(`Starting enhanced DOCX to PDF conversion for: ${path.basename(filePath)} (${fileStats.size} bytes)`);
+
+    const conversionErrors: string[] = [];
 
     try {
       // Try multiple conversion strategies in order of preference
       
       // Strategy 1: LibreOffice command line (highest fidelity)
       try {
+        console.log('Attempting Strategy 1: LibreOffice conversion...');
         const libreOfficePath = await this.convertWithLibreOffice(filePath, tempPdfPath);
         if (libreOfficePath && fs.existsSync(libreOfficePath)) {
-          console.log('SUCCESS: LibreOffice conversion completed with high fidelity');
-          return libreOfficePath;
+          const outputStats = fs.statSync(libreOfficePath);
+          if (outputStats.size > 0) {
+            console.log(`SUCCESS: LibreOffice conversion completed with high fidelity (${outputStats.size} bytes)`);
+            return libreOfficePath;
+          }
         }
+        throw new Error('LibreOffice produced empty or invalid output');
       } catch (error) {
-        console.log(`LibreOffice conversion failed: ${error}`);
+        const errorMsg = `LibreOffice conversion failed: ${error instanceof Error ? error.message : String(error)}`;
+        console.warn(errorMsg);
+        conversionErrors.push(errorMsg);
       }
 
-      // Strategy 2: DOCX parsing with manual PDF generation (medium fidelity)
+      // Strategy 2: Mammoth.js conversion (high-medium fidelity)
       try {
-        const parsedPath = await this.convertWithDOCXParsing(filePath, tempPdfPath);
-        if (parsedPath && fs.existsSync(parsedPath)) {
-          console.log('SUCCESS: DOCX parsing conversion completed with medium fidelity');
-          return parsedPath;
+        console.log('Attempting Strategy 2: Mammoth.js conversion...');
+        const mammothPath = await this.convertWithMammoth(filePath, tempPdfPath + '_mammoth.pdf');
+        if (mammothPath && fs.existsSync(mammothPath)) {
+          const outputStats = fs.statSync(mammothPath);
+          if (outputStats.size > 0) {
+            console.log(`SUCCESS: Mammoth.js conversion completed with high-medium fidelity (${outputStats.size} bytes)`);
+            return mammothPath;
+          }
         }
+        throw new Error('Mammoth.js produced empty or invalid output');
       } catch (error) {
-        console.log(`DOCX parsing conversion failed: ${error}`);
+        const errorMsg = `Mammoth.js conversion failed: ${error instanceof Error ? error.message : String(error)}`;
+        console.warn(errorMsg);
+        conversionErrors.push(errorMsg);
       }
 
-      // Strategy 3: Enhanced placeholder with document analysis (fallback)
-      console.log('Using enhanced placeholder conversion with document analysis');
-      return await this.createEnhancedPlaceholderPDF(filePath, tempPdfPath);
+      // Strategy 3: DOCX parsing with manual PDF generation (medium fidelity)
+      try {
+        console.log('Attempting Strategy 3: DOCX XML parsing conversion...');
+        const parsedPath = await this.convertWithDOCXParsing(filePath, tempPdfPath + '_parsed.pdf');
+        if (parsedPath && fs.existsSync(parsedPath)) {
+          const outputStats = fs.statSync(parsedPath);
+          if (outputStats.size > 0) {
+            console.log(`SUCCESS: DOCX parsing conversion completed with medium fidelity (${outputStats.size} bytes)`);
+            return parsedPath;
+          }
+        }
+        throw new Error('DOCX parsing produced empty or invalid output');
+      } catch (error) {
+        const errorMsg = `DOCX parsing conversion failed: ${error instanceof Error ? error.message : String(error)}`;
+        console.warn(errorMsg);
+        conversionErrors.push(errorMsg);
+      }
+
+      // Strategy 4: Enhanced placeholder with document analysis (fallback)
+      try {
+        console.log('Attempting Strategy 4: Enhanced placeholder with document analysis...');
+        const placeholderPath = await this.createEnhancedPlaceholderPDF(filePath, tempPdfPath + '_placeholder.pdf');
+        if (placeholderPath && fs.existsSync(placeholderPath)) {
+          const outputStats = fs.statSync(placeholderPath);
+          console.log(`SUCCESS: Enhanced placeholder PDF created (${outputStats.size} bytes)`);
+          console.log('Previous conversion errors:', conversionErrors);
+          return placeholderPath;
+        }
+        throw new Error('Placeholder generation failed');
+      } catch (placeholderError) {
+        conversionErrors.push(`Placeholder generation failed: ${placeholderError}`);
+        throw new Error(`All conversion strategies failed. Errors: ${conversionErrors.join('; ')}`);
+      }
 
     } catch (error) {
       throw new Error(`Failed to convert DOCX to PDF: ${error}`);
@@ -161,15 +235,28 @@ export class DocumentMerger {
     const { promisify } = require('util');
     const execAsync = promisify(exec);
     
+    // Get LibreOffice path from verification service
+    const libreOfficeService = LibreOfficeVerificationService.getInstance();
+    const status = await libreOfficeService.verifyLibreOfficeInstallation();
+    
+    if (!status.isInstalled || !status.path) {
+      throw new Error('LibreOffice is not installed or not found');
+    }
+    
+    if (!status.canConvert) {
+      throw new Error('LibreOffice is installed but cannot convert documents');
+    }
+    
     const outputDir = path.dirname(outputPath);
     const inputFileName = path.basename(filePath, '.docx');
     const expectedOutputPath = path.join(outputDir, `${inputFileName}.pdf`);
     
     try {
-      // Enhanced LibreOffice command with quality settings
-      const command = `soffice --headless --convert-to pdf:writer_pdf_Export:{"Quality":100,"ReduceImageResolution":false,"MaxImageResolution":300} --outdir "${outputDir}" "${filePath}"`;
+      // Simplified LibreOffice command for better compatibility
+      const command = `"${status.path}" --invisible --convert-to pdf --outdir "${outputDir}" "${filePath}"`;
       
-      console.log(`Executing LibreOffice conversion: ${command}`);
+      console.log(`Executing LibreOffice conversion with path: ${status.path}`);
+      console.log(`Command: ${command}`);
       
       const { stdout, stderr } = await execAsync(command, { 
         timeout: 30000,
@@ -198,6 +285,191 @@ export class DocumentMerger {
     } catch (error) {
       throw new Error(`LibreOffice conversion failed: ${error}`);
     }
+  }
+
+  private async convertWithMammoth(filePath: string, outputPath: string): Promise<string> {
+    const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+    
+    try {
+      // Validate input file
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`Input file does not exist: ${filePath}`);
+      }
+      
+      const fileStats = fs.statSync(filePath);
+      if (fileStats.size === 0) {
+        throw new Error('Input file is empty');
+      }
+      
+      console.log('Converting DOCX to HTML using mammoth.js...');
+      
+      // Convert DOCX to HTML using mammoth with enhanced options
+      const options = {
+        path: filePath,
+        convertImage: mammoth.images.imgElement((image: any) => {
+          return image.read("base64").then((imageBuffer: string) => {
+            return {
+              src: `data:${image.contentType};base64,${imageBuffer}`
+            };
+          });
+        })
+      };
+      
+      const result = await mammoth.convertToHtml(options);
+      const html = result.value;
+      const messages = result.messages;
+      
+      // Log any conversion messages/warnings
+      if (messages && messages.length > 0) {
+        console.log('Mammoth conversion messages:', messages.map((m: any) => m.message).join(', '));
+      }
+      
+      if (!html || html.trim().length === 0) {
+        throw new Error('Mammoth produced empty HTML content');
+      }
+      
+      console.log(`Mammoth extracted ${html.length} characters of HTML content`);
+      
+      // Convert HTML to PDF using pdf-lib
+      const pdfDoc = await PDFDocument.create();
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      const italicFont = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+      
+      let currentPage = pdfDoc.addPage();
+      const pageWidth = 612; // Letter size
+      const pageHeight = 792;
+      const margin = 72; // 1 inch
+      let currentY = pageHeight - margin;
+      const lineHeight = 14;
+      const fontSize = 11;
+      
+      // Parse HTML and extract text content
+      const textContent = this.extractTextFromHTML(html);
+      const lines = this.wrapText(textContent, pageWidth - (2 * margin), font, fontSize);
+      
+      // Add content to PDF
+      for (const line of lines) {
+        if (currentY < margin + lineHeight) {
+          // Add new page
+          currentPage = pdfDoc.addPage();
+          currentY = pageHeight - margin;
+        }
+        
+        // Determine font style based on HTML tags (basic implementation)
+        let selectedFont = font;
+        if (line.includes('<strong>') || line.includes('<b>')) {
+          selectedFont = boldFont;
+        } else if (line.includes('<em>') || line.includes('<i>')) {
+          selectedFont = italicFont;
+        }
+        
+        // Clean the line of HTML tags
+        const cleanLine = line.replace(/<[^>]*>/g, '').trim();
+        
+        if (cleanLine) {
+          currentPage.drawText(cleanLine, {
+            x: margin,
+            y: currentY,
+            size: fontSize,
+            font: selectedFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+        
+        currentY -= lineHeight;
+      }
+      
+      // Add metadata
+      pdfDoc.setTitle('Converted from DOCX using Mammoth.js');
+      pdfDoc.setCreator('Merge Nova - Mammoth.js Converter');
+      
+      const pdfBytes = await pdfDoc.save();
+      
+      // Ensure output directory exists
+      const outputDir = path.dirname(outputPath);
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      
+      fs.writeFileSync(outputPath, pdfBytes);
+      
+      // Validate output
+      const outputStats = fs.statSync(outputPath);
+      if (outputStats.size === 0) {
+        throw new Error('Generated PDF is empty');
+      }
+      
+      console.log(`Mammoth conversion completed: ${lines.length} lines processed, ${outputStats.size} bytes`);
+      return outputPath;
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Mammoth conversion error: ${errorMessage}`);
+      throw new Error(`Mammoth conversion failed: ${errorMessage}`);
+    }
+  }
+
+  private extractTextFromHTML(html: string): string {
+    // Simple HTML to text conversion
+    // Replace common HTML elements with appropriate text formatting
+    let text = html
+      .replace(/<p[^>]*>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<br[^>]*>/gi, '\n')
+      .replace(/<h[1-6][^>]*>/gi, '\n')
+      .replace(/<\/h[1-6]>/gi, '\n\n')
+      .replace(/<li[^>]*>/gi, '• ')
+      .replace(/<\/li>/gi, '\n')
+      .replace(/<[^>]*>/g, '') // Remove all other HTML tags
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\n\s*\n/g, '\n\n') // Clean up multiple newlines
+      .trim();
+    
+    return text;
+  }
+
+  private wrapText(text: string, maxWidth: number, font: any, fontSize: number): string[] {
+    const lines: string[] = [];
+    const paragraphs = text.split('\n');
+    
+    for (const paragraph of paragraphs) {
+      if (!paragraph.trim()) {
+        lines.push(''); // Empty line
+        continue;
+      }
+      
+      const words = paragraph.split(' ');
+      let currentLine = '';
+      
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const textWidth = font.widthOfTextAtSize(testLine, fontSize);
+        
+        if (textWidth <= maxWidth) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
+            // Word is too long, break it
+            lines.push(word);
+          }
+        }
+      }
+      
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+    }
+    
+    return lines;
   }
 
   private async convertWithDOCXParsing(filePath: string, outputPath: string): Promise<string> {
@@ -543,8 +815,9 @@ export class DocumentMerger {
       
       const methods = [
         '1. LibreOffice command-line conversion (High fidelity)',
-        '2. DOCX XML parsing with manual PDF generation (Medium fidelity)',
-        '3. Enhanced placeholder with document analysis (Current method)'
+        '2. Mammoth.js DOCX to HTML conversion (High-medium fidelity)',
+        '3. DOCX XML parsing with manual PDF generation (Medium fidelity)',
+        '4. Enhanced placeholder with document analysis (Current method)'
       ];
       
       methods.forEach(method => {
@@ -572,9 +845,10 @@ export class DocumentMerger {
       
       const recommendations = [
         '- Install LibreOffice for automatic high-fidelity conversion',
+        '✓ Mammoth.js implemented for better DOCX to HTML conversion',
         '- Use online conversion services for complex documents',
         '- Consider Puppeteer with HTML conversion for web-based rendering',
-        '- Implement mammoth.js for better DOCX to HTML conversion'
+        '- Enhance error handling and fallback mechanisms'
       ];
       
       recommendations.forEach(rec => {
