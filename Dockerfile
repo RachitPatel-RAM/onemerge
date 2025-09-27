@@ -38,7 +38,7 @@ WORKDIR /app
 COPY server/package*.json ./
 
 # Install production dependencies
-RUN npm ci --only=production && npm list mammoth
+RUN npm ci --only=production
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
