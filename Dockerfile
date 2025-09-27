@@ -37,8 +37,13 @@ WORKDIR /app
 # Copy package files
 COPY server/package*.json ./
 
-# Copy node_modules from builder stage (includes all production dependencies)
-COPY --from=builder /app/node_modules ./node_modules
+# Install production dependencies fresh to ensure clean state
+RUN npm ci --only=production --verbose
+
+# Verify mammoth is installed
+RUN ls -la node_modules/ | grep mammoth || echo "mammoth not found in node_modules"
+RUN test -d node_modules/mammoth && echo "mammoth directory exists" || echo "mammoth directory missing"
+RUN node -e "try { require('mammoth'); console.log('mammoth module loads successfully'); } catch(e) { console.error('mammoth load failed:', e.message); process.exit(1); }"
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
