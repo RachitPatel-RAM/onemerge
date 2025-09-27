@@ -37,14 +37,11 @@ WORKDIR /app
 # Copy package files
 COPY server/package*.json ./
 
-# Install only production dependencies
-RUN npm ci --only=production
+# Install production dependencies
+RUN npm ci --only=production && npm list mammoth
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
-
-# Verify mammoth installation
-RUN node -e "console.log('Checking mammoth...'); try { require('mammoth'); console.log('mammoth OK'); } catch(e) { console.error('mammoth ERROR:', e.message); process.exit(1); }"
 
 # Expose port
 EXPOSE 10000
