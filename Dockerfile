@@ -1,5 +1,23 @@
-# Use Node.js base image
-FROM node:22-slim
+# Build stage
+FROM node:22-slim AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy server package files
+COPY server/package*.json ./
+
+# Install all dependencies (including devDependencies for build)
+RUN npm ci
+
+# Copy source code
+COPY server .
+
+# Build TypeScript
+RUN npm run build
+
+# Production stage
+FROM node:22-slim AS production
 
 # Install LibreOffice and fonts
 RUN apt-get update && apt-get install -y \
@@ -16,17 +34,17 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy server package files
+# Copy package files
 COPY server/package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install only production dependencies
+RUN npm ci --only=production
 
-# Copy source code
-COPY server .
+# Copy built application from builder stage
+COPY --from=builder /app/dist ./dist
 
-# Build TypeScript
-RUN npm run build
+# Verify mammoth installation
+RUN node -e "console.log('Checking mammoth...'); try { require('mammoth'); console.log('mammoth OK'); } catch(e) { console.error('mammoth ERROR:', e.message); process.exit(1); }"
 
 # Expose port
 EXPOSE 10000
