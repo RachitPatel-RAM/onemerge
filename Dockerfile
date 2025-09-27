@@ -34,11 +34,13 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY server/package*.json ./
+# Copy package files explicitly
+COPY server/package.json ./package.json
+COPY server/package-lock.json ./package-lock.json
 
-# Install production dependencies fresh to ensure clean state
-RUN npm ci --only=production --verbose
+# Clean npm cache and install production dependencies
+RUN npm cache clean --force
+RUN npm ci --only=production --verbose --no-optional
 
 # Verify mammoth is installed
 RUN ls -la node_modules/ | grep mammoth || echo "mammoth not found in node_modules"
