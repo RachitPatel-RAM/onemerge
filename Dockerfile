@@ -40,7 +40,7 @@ COPY server/package-lock.json ./package-lock.json
 
 # Clean npm cache and install all dependencies (including mammoth)
 RUN npm cache clean --force
-RUN npm ci --verbose --no-optional
+RUN npm install --verbose --no-optional
 
 # Verify mammoth is installed
 RUN ls -la node_modules/ | grep mammoth || echo "mammoth not found in node_modules"
