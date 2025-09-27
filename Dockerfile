@@ -37,8 +37,8 @@ WORKDIR /app
 # Copy package files
 COPY server/package*.json ./
 
-# Install production dependencies
-RUN npm ci --only=production
+# Copy node_modules from builder stage (includes all production dependencies)
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
