@@ -18,6 +18,15 @@ import { LibreOfficeVerificationService } from './services/LibreOfficeVerificati
 // Load environment variables
 dotenv.config();
 
+// Test mammoth import at startup
+try {
+  require('mammoth');
+  console.log('✅ Mammoth module loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load mammoth module:', error);
+  process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT || 10000;
 
@@ -91,13 +100,14 @@ app.use('*', (req: express.Request, res: express.Response) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, async () => {
+app.listen(Number(PORT), '0.0.0.0', async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📁 Upload directory: ${process.env.UPLOAD_DIR || './uploads'}`);
   console.log(`📤 Output directory: ${process.env.OUTPUT_DIR || './output'}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'not set'}`);
   console.log(`🔗 All allowed origins:`, allowedOrigins);
+  console.log(`🌍 Server listening on 0.0.0.0:${PORT}`);
   
   // Verify LibreOffice installation
   try {

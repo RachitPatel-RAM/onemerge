@@ -1,22 +1,22 @@
-# =========================
 # Build stage
-# =========================
 FROM node:22-slim AS builder
 
+# Set working directory
 WORKDIR /app
 
-# Copy package files and install all dependencies (including dev)
+# Copy server package files
 COPY server/package*.json ./
+
+# Install all dependencies (including devDependencies for build)
 RUN npm ci
 
-# Copy source code and build
-COPY server ./
+# Copy source code
+COPY server .
+
+# Build TypeScript
 RUN npm run build
 
-
-# =========================
 # Production stage
-# =========================
 FROM node:22-slim AS production
 
 # Install LibreOffice and fonts
@@ -31,17 +31,35 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && libreoffice --version
 
+# Set working directory
 WORKDIR /app
 
-# Copy only built files
+# Copy package files
+COPY server/package*.json ./
+
+# Clear npm cache and install production dependencies with verbose output
+RUN npm cache clean --force && \
+    npm ci --omit=dev --verbose
+
+# Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
 
-# ✅ Install only production deps (this ensures mammoth is present)
-RUN npm ci --omit=dev
+# Verify mammoth is installed and list all dependencies
+RUN echo "=== Checking mammoth installation ===" && \
+    npm list mammoth && \
+    echo "=== All installed packages ===" && \
+    npm list --depth=0 && \
+    echo "=== Checking mammoth module directory ===" && \
+    ls -la node_modules/mammoth/ && \
+    echo "=== Testing mammoth import ===" && \
+    node -e "console.log('Testing mammoth import...'); try { require('mammoth'); console.log('Mammoth import successful'); } catch(e) { console.error('Mammoth import failed:', e.message); process.exit(1); }" || \
+    (echo "=== Mammoth not found, installing manually ===" && \
+     npm install mammoth@^1.11.0 && \
+     echo "=== Verifying manual installation ===" && \
+     node -e "console.log('Testing manual mammoth import...'); try { require('mammoth'); console.log('Manual mammoth import successful'); } catch(e) { console.error('Manual mammoth import failed:', e.message); process.exit(1); }")
 
-# ✅ Debug check to confirm mammoth exists at build time
-RUN node -e "require('mammoth'); console.log('✅ Mammoth is installed and working');"
-
+# Expose port
 EXPOSE 10000
+
+# Start the server
 CMD ["npm", "start"]
