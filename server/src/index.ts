@@ -46,7 +46,7 @@ app.use(compression());
 const allowedOrigins = [
   'http://localhost:8080',
   'http://localhost:5173',
-  'https://onemerge.onrender.com',
+  'https://onemergee.onrender.com',
   process.env.CORS_ORIGIN
 ].filter(Boolean);
 
