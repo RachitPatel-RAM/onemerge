@@ -487,10 +487,10 @@ ${result.qualityAssessment.issues.length > 0 ? `**Issues**: ${result.qualityAsse
 ## Recommendations
 
 ${suiteResult.overallScore >= 85 ? 
-  '✅ The conversion system meets high-quality standards across all test cases.' :
+  '[SUCCESS] The conversion system meets high-quality standards across all test cases.' :
   suiteResult.overallScore >= 70 ?
-    '⚠️ The conversion system meets medium-quality standards. Consider optimizing failed test cases.' :
-    '❌ The conversion system requires significant improvements to meet quality standards.'
+    '[WARNING] The conversion system meets medium-quality standards. Consider optimizing failed test cases.' :
+    '[ERROR] The conversion system requires significant improvements to meet quality standards.'
 }
 
 Generated on: ${new Date().toISOString()}

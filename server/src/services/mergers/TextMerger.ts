@@ -117,6 +117,33 @@ export class TextMerger {
     const tempDir = process.env.TEMP_DIR || './temp';
     const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
 
+    // Input validation
+    if (!filePath) {
+      throw new Error('File path is required');
+    }
+
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Text file not found: ${filePath}`);
+    }
+
+    const stats = fs.statSync(filePath);
+    if (stats.size === 0) {
+      throw new Error(`Text file is empty: ${filePath}`);
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    const supportedFormats = ['.txt', '.csv'];
+    if (!supportedFormats.includes(ext)) {
+      throw new Error(`Unsupported text format: ${ext}. Supported formats: ${supportedFormats.join(', ')}`);
+    }
+
+    // Ensure temp directory exists
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    console.log(`Converting text to PDF: ${filePath}`);
+
     try {
       // Try to read with different encodings
       let content: string;
@@ -204,11 +231,38 @@ export class TextMerger {
       }
 
       const pdfBytes = await pdfDoc.save();
+      
+      if (!pdfBytes || pdfBytes.length === 0) {
+        throw new Error('Generated PDF is empty');
+      }
+
       fs.writeFileSync(tempPdfPath, pdfBytes);
       
+      // Validate output file
+      if (!fs.existsSync(tempPdfPath)) {
+        throw new Error('Failed to create PDF file');
+      }
+
+      const outputStats = fs.statSync(tempPdfPath);
+      if (outputStats.size === 0) {
+        throw new Error('Generated PDF file is empty');
+      }
+
+      console.log(`Successfully converted text to PDF: ${tempPdfPath} (${outputStats.size} bytes)`);
       return tempPdfPath;
     } catch (error) {
-      throw new Error(`Failed to convert text to PDF: ${error}`);
+      console.error(`Text to PDF conversion failed for ${filePath}:`, error);
+      
+      // Clean up any partial files
+      if (fs.existsSync(tempPdfPath)) {
+        try {
+          fs.unlinkSync(tempPdfPath);
+        } catch (cleanupError) {
+          console.warn(`Failed to clean up partial PDF file: ${cleanupError}`);
+        }
+      }
+      
+      throw new Error(`Failed to convert text to PDF: ${error instanceof Error ? error.message : error}`);
     }
   }
 

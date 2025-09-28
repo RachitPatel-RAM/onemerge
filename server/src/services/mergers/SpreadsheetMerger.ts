@@ -74,7 +74,7 @@ export class SpreadsheetMerger {
     const tempDir = process.env.TEMP_DIR || './temp';
     const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
 
-    // Validate input file
+    // Enhanced input validation
     if (!fs.existsSync(filePath)) {
       throw new Error(`Input file does not exist: ${filePath}`);
     }
@@ -82,6 +82,17 @@ export class SpreadsheetMerger {
     const fileStats = fs.statSync(filePath);
     if (fileStats.size === 0) {
       throw new Error(`Input file is empty: ${filePath}`);
+    }
+
+    // Check file extension
+    const fileExt = path.extname(filePath).toLowerCase();
+    if (!['.xlsx', '.xls', '.csv'].includes(fileExt)) {
+      throw new Error(`Unsupported spreadsheet format: ${fileExt}`);
+    }
+
+    // Ensure temp directory exists
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
     }
 
     console.log(`Starting enhanced XLSX to PDF conversion for: ${path.basename(filePath)} (${fileStats.size} bytes)`);
@@ -406,10 +417,66 @@ export class SpreadsheetMerger {
       const pdfBytes = await pdfDoc.save();
       fs.writeFileSync(tempPdfPath, pdfBytes);
       
-      console.log(`SUCCESS: Enhanced XLSX conversion completed - ${totalCellsProcessed} cells, ${totalFormulasFound} formulas preserved`);
+      // Validate output
+      const outputStats = fs.statSync(tempPdfPath);
+      if (outputStats.size === 0) {
+        throw new Error('Generated PDF is empty');
+      }
+      
+      console.log(`SUCCESS: Enhanced XLSX conversion completed - ${totalCellsProcessed} cells, ${totalFormulasFound} formulas preserved (${outputStats.size} bytes)`);
       return tempPdfPath;
+      
     } catch (error) {
-      throw new Error(`Failed to convert spreadsheet to PDF: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`SpreadsheetMerger conversion error: ${errorMessage}`);
+      
+      // Create fallback PDF with error information
+      try {
+        const fallbackPdfDoc = await PDFDocument.create();
+        const fallbackPage = fallbackPdfDoc.addPage();
+        const fallbackFont = await fallbackPdfDoc.embedFont(StandardFonts.Helvetica);
+        const boldFont = await fallbackPdfDoc.embedFont(StandardFonts.HelveticaBold);
+        
+        fallbackPage.drawText('Spreadsheet Conversion Report', {
+          x: 50,
+          y: 750,
+          size: 20,
+          font: boldFont,
+          color: rgb(0, 0, 0),
+        });
+        
+        fallbackPage.drawText(`File: ${path.basename(filePath)}`, {
+          x: 50,
+          y: 700,
+          size: 14,
+          font: boldFont,
+        });
+        
+        fallbackPage.drawText('Status: Conversion encountered issues', {
+          x: 50,
+          y: 650,
+          size: 12,
+          font: fallbackFont,
+          color: rgb(0.8, 0.5, 0),
+        });
+        
+        fallbackPage.drawText(`Error: ${errorMessage}`, {
+          x: 50,
+          y: 600,
+          size: 10,
+          font: fallbackFont,
+          color: rgb(0.8, 0, 0),
+        });
+        
+        const fallbackBytes = await fallbackPdfDoc.save();
+        fs.writeFileSync(tempPdfPath, fallbackBytes);
+        
+        console.log(`Fallback PDF created for failed spreadsheet conversion`);
+        return tempPdfPath;
+        
+      } catch (fallbackError) {
+        throw new Error(`Failed to convert spreadsheet to PDF: ${errorMessage}. Fallback also failed: ${fallbackError}`);
+      }
     }
   }
 

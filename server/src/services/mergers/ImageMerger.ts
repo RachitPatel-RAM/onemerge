@@ -82,8 +82,41 @@ export class ImageMerger {
     const tempDir = process.env.TEMP_DIR || './temp';
     const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
 
+    // Input validation
+    if (!filePath) {
+      throw new Error('File path is required');
+    }
+
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Image file not found: ${filePath}`);
+    }
+
+    const stats = fs.statSync(filePath);
+    if (stats.size === 0) {
+      throw new Error(`Image file is empty: ${filePath}`);
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    const supportedFormats = ['.jpg', '.jpeg', '.png'];
+    if (!supportedFormats.includes(ext)) {
+      throw new Error(`Unsupported image format: ${ext}. Supported formats: ${supportedFormats.join(', ')}`);
+    }
+
+    // Ensure temp directory exists
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    console.log(`Converting image to PDF: ${filePath}`);
+
     try {
       const imageBuffer = fs.readFileSync(filePath);
+      
+      // Validate image buffer
+      if (!imageBuffer || imageBuffer.length === 0) {
+        throw new Error('Failed to read image file or file is empty');
+      }
+
       const pdfDoc = await PDFDocument.create();
       
       // Determine image type and embed accordingly
@@ -129,11 +162,38 @@ export class ImageMerger {
       });
 
       const pdfBytes = await pdfDoc.save();
+      
+      if (!pdfBytes || pdfBytes.length === 0) {
+        throw new Error('Generated PDF is empty');
+      }
+
       fs.writeFileSync(tempPdfPath, pdfBytes);
       
+      // Validate output file
+      if (!fs.existsSync(tempPdfPath)) {
+        throw new Error('Failed to create PDF file');
+      }
+
+      const outputStats = fs.statSync(tempPdfPath);
+      if (outputStats.size === 0) {
+        throw new Error('Generated PDF file is empty');
+      }
+
+      console.log(`Successfully converted image to PDF: ${tempPdfPath} (${outputStats.size} bytes)`);
       return tempPdfPath;
     } catch (error) {
-      throw new Error(`Failed to convert image to PDF: ${error}`);
+      console.error(`Image to PDF conversion failed for ${filePath}:`, error);
+      
+      // Clean up any partial files
+      if (fs.existsSync(tempPdfPath)) {
+        try {
+          fs.unlinkSync(tempPdfPath);
+        } catch (cleanupError) {
+          console.warn(`Failed to clean up partial PDF file: ${cleanupError}`);
+        }
+      }
+      
+      throw new Error(`Failed to convert image to PDF: ${error instanceof Error ? error.message : error}`);
     }
   }
 }
