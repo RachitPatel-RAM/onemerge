@@ -24,7 +24,8 @@ try {
   console.log('✅ Mammoth module loaded successfully');
 } catch (error) {
   console.error('❌ Failed to load mammoth module:', error);
-  process.exit(1);
+  console.error('❌ This will cause issues with DOCX processing, but server will continue');
+  // Don't exit - let the server start and handle mammoth errors gracefully
 }
 
 const app = express();
@@ -57,6 +58,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'https://onemerge-frontend.onrender.com',
   'https://onemergee.onrender.com',
+  'https://onemerge.onrender.com', // Add backend domain for testing
   process.env.CORS_ORIGIN
 ].filter(Boolean);
 
@@ -65,19 +67,30 @@ console.log('📍 Allowed Origins:', allowedOrigins);
 console.log('🌍 CORS_ORIGIN env var:', process.env.CORS_ORIGIN);
 console.log('🚀 Server starting with NODE_ENV:', process.env.NODE_ENV);
 
+// Enhanced CORS configuration
 app.use(cors({
   origin: (origin, callback) => {
+    console.log('🌐 CORS Request from origin:', origin);
+    
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('✅ Allowing request with no origin');
+      return callback(null, true);
+    }
     
     if (allowedOrigins.includes(origin)) {
+      console.log('✅ Allowing origin:', origin);
       return callback(null, true);
     } else {
       console.log('❌ CORS blocked origin:', origin);
+      console.log('❌ Allowed origins are:', allowedOrigins);
       return callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -88,6 +101,16 @@ app.use('/api/health', healthRoutes);
 app.use('/api/merge', mergeRoutes);
 app.use('/api/powerpoint', powerpointRoutes);
 app.use('/api/test', testRoutes);
+
+// Simple test endpoint
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'Backend is working!', 
+    timestamp: new Date().toISOString(),
+    origin: req.get('origin') || 'no origin',
+    headers: req.headers
+  });
+});
 
 // Serve static files from output directory
 app.use('/api/download', express.static(path.join(__dirname, '../', process.env.OUTPUT_DIR || './output')));
@@ -108,6 +131,8 @@ app.listen(Number(PORT), '0.0.0.0', async () => {
   console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'not set'}`);
   console.log(`🔗 All allowed origins:`, allowedOrigins);
   console.log(`🌍 Server listening on 0.0.0.0:${PORT}`);
+  console.log(`🔗 Health check available at: http://0.0.0.0:${PORT}/api/health`);
+  console.log(`🔗 Test endpoint available at: http://0.0.0.0:${PORT}/api/test`);
   
   // Verify LibreOffice installation
   try {

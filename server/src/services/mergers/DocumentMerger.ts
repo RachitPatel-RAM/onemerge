@@ -5,7 +5,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { LibreOfficeVerificationService } from '../LibreOfficeVerificationService';
 
 const AdmZip = require('adm-zip');
-const mammoth = require('mammoth');
+
+// Safe mammoth import with fallback
+let mammoth: any = null;
+try {
+  mammoth = require('mammoth');
+  console.log('✅ Mammoth loaded in DocumentMerger');
+} catch (error) {
+  console.warn('⚠️ Mammoth not available in DocumentMerger:', error);
+}
 
 export class DocumentMerger {
   private paragraphs: Paragraph[] = [];
@@ -295,6 +303,11 @@ export class DocumentMerger {
     const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
     
     try {
+      // Check if mammoth is available
+      if (!mammoth) {
+        throw new Error('Mammoth module is not available');
+      }
+      
       // Validate input file
       if (!fs.existsSync(filePath)) {
         throw new Error(`Input file does not exist: ${filePath}`);
