@@ -19,7 +19,7 @@ import { LibreOfficeVerificationService } from './services/LibreOfficeVerificati
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000;
 
 // Create necessary directories
 const createDirectories = () => {
@@ -47,6 +47,7 @@ const allowedOrigins = [
   'http://localhost:8080',
   'http://localhost:5173',
   'https://onemerge-frontend.onrender.com',
+  'https://onemergee.onrender.com',
   process.env.CORS_ORIGIN
 ].filter(Boolean);
 
