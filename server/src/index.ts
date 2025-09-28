@@ -53,6 +53,7 @@ const allowedOrigins = [
 console.log('🔧 CORS Configuration:');
 console.log('📍 Allowed Origins:', allowedOrigins);
 console.log('🌍 CORS_ORIGIN env var:', process.env.CORS_ORIGIN);
+console.log('🚀 Server starting with NODE_ENV:', process.env.NODE_ENV);
 
 app.use(cors({
   origin: (origin, callback) => {
