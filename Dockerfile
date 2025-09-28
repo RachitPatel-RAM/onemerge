@@ -1,4 +1,6 @@
+# =========================
 # Build stage
+# =========================
 FROM node:22-slim AS builder
 
 # Set working directory
@@ -11,12 +13,15 @@ COPY server/package*.json ./
 RUN npm ci
 
 # Copy source code
-COPY server .
+COPY server ./
 
 # Build TypeScript
 RUN npm run build
 
+
+# =========================
 # Production stage
+# =========================
 FROM node:22-slim AS production
 
 # Install LibreOffice and fonts
@@ -34,26 +39,11 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy package files explicitly
-COPY server/package.json ./package.json
-COPY server/package-lock.json ./package-lock.json
+# Copy package files
+COPY server/package*.json ./
 
-# Debug: Verify files are copied correctly
-RUN echo "=== Debugging package files ===" && \
-    ls -la package.json package-lock.json && \
-    echo "=== package.json content ===" && \
-    head -20 package.json && \
-    echo "=== package-lock.json mammoth entry ===" && \
-    grep -A 5 -B 5 '"mammoth"' package-lock.json || echo "mammoth not found in package-lock.json"
-
-# Clean npm cache and install all dependencies (including mammoth)
-RUN npm cache clean --force
-RUN npm install --verbose --no-optional
-
-# Verify mammoth is installed
-RUN ls -la node_modules/ | grep mammoth || echo "mammoth not found in node_modules"
-RUN test -d node_modules/mammoth && echo "mammoth directory exists" || echo "mammoth directory missing"
-RUN node -e "try { require('mammoth'); console.log('mammoth module loads successfully'); } catch(e) { console.error('mammoth load failed:', e.message); process.exit(1); }"
+# Install only production dependencies (mammoth must be in "dependencies")
+RUN npm ci --only=production
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
