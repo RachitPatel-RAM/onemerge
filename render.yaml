@@ -5,6 +5,7 @@ services:
     env: docker
     plan: starter
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
     # Fallback build command if Docker fails
     buildCommand: |
       if [ -f "install-libreoffice.sh" ]; then
