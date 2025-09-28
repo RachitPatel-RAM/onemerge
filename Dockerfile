@@ -38,6 +38,14 @@ WORKDIR /app
 COPY server/package.json ./package.json
 COPY server/package-lock.json ./package-lock.json
 
+# Debug: Verify files are copied correctly
+RUN echo "=== Debugging package files ===" && \
+    ls -la package.json package-lock.json && \
+    echo "=== package.json content ===" && \
+    head -20 package.json && \
+    echo "=== package-lock.json mammoth entry ===" && \
+    grep -A 5 -B 5 '"mammoth"' package-lock.json || echo "mammoth not found in package-lock.json"
+
 # Clean npm cache and install all dependencies (including mammoth)
 RUN npm cache clean --force
 RUN npm install --verbose --no-optional
